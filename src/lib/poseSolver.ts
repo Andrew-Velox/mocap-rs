@@ -18,6 +18,11 @@ const IMAGE_SIZE = { width: 1280, height: 720 };
 
 export function solvePose(frame: LandmarkFrame): SolvedPose {
   const out: SolvedPose = {};
+  // Use the phone's real capture resolution so kalidokit's head/hips
+  // normalization uses the correct aspect ratio (matches SysMoCap passing the
+  // live video element).
+  const imageSize =
+    frame.imageSize && frame.imageSize.width > 0 ? frame.imageSize : IMAGE_SIZE;
 
   // MediaPipe Holistic labels the hands reversed relative to the body, so the
   // hand it calls "left" is actually the person's right hand. Swap to get
@@ -32,7 +37,7 @@ export function solvePose(frame: LandmarkFrame): SolvedPose {
     const pose =
       Kalidokit.Pose.solve(lm3d, frame.pose, {
         runtime: "mediapipe",
-        imageSize: IMAGE_SIZE,
+        imageSize,
         enableLegs: true,
       }) ?? undefined;
 
@@ -49,7 +54,7 @@ export function solvePose(frame: LandmarkFrame): SolvedPose {
     out.face =
       Kalidokit.Face.solve(frame.face, {
         runtime: "mediapipe",
-        imageSize: IMAGE_SIZE,
+        imageSize,
         smoothBlink: true,
       }) ?? undefined;
   }

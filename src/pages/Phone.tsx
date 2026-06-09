@@ -92,6 +92,7 @@ export function Phone() {
     (raw: DetectResult) => {
       const r = filterByMode(raw, modeRef.current);
 
+      const video = videoRef.current;
       const frame: LandmarkFrame = {
         type: "landmarks",
         timestamp: Date.now(),
@@ -100,10 +101,12 @@ export function Phone() {
         face: r.face,
         leftHand: r.leftHand,
         rightHand: r.rightHand,
+        imageSize: video
+          ? { width: video.videoWidth, height: video.videoHeight }
+          : undefined,
       };
       send(frame);
 
-      const video = videoRef.current;
       if (video) drawOverlay(canvasRef.current, video, r);
 
       const now = performance.now();
@@ -256,15 +259,58 @@ export function Phone() {
 }
 
 // ── Overlay rendering ──────────────────────────────────────────────────────
+// MediaPipe connection index pairs are globals once holistic.js loads.
+type Conn = ReadonlyArray<readonly [number, number]>;
+const mpConns = () =>
+  window as unknown as {
+    POSE_CONNECTIONS?: Conn;
+    HAND_CONNECTIONS?: Conn;
+    FACEMESH_TESSELATION?: Conn;
+  };
+
+function drawConnectors(
+  ctx: CanvasRenderingContext2D,
+  pts: Landmark[],
+  conns: Conn | undefined,
+  w: number,
+  h: number,
+  color: string,
+  lineWidth: number
+) {
+  if (!conns || pts.length === 0) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  for (const [a, b] of conns) {
+    const pa = pts[a];
+    const pb = pts[b];
+    if (!pa || !pb) continue;
+    ctx.moveTo(pa.x * w, pa.y * h);
+    ctx.lineTo(pb.x * w, pb.y * h);
+  }
+  ctx.stroke();
+}
+
+function drawDots(
+  ctx: CanvasRenderingContext2D,
+  pts: Landmark[],
+  w: number,
+  h: number,
+  color: string,
+  r: number
+) {
+  ctx.fillStyle = color;
+  for (const p of pts) {
+    ctx.beginPath();
+    ctx.arc(p.x * w, p.y * h, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawOverlay(
   canvas: HTMLCanvasElement | null,
   video: HTMLVideoElement,
-  r: {
-    pose: Landmark[];
-    face: Landmark[];
-    leftHand: Landmark[];
-    rightHand: Landmark[];
-  }
+  r: { pose: Landmark[]; face: Landmark[]; leftHand: Landmark[]; rightHand: Landmark[] }
 ) {
   if (!canvas) return;
   const w = video.videoWidth;
@@ -278,17 +324,21 @@ function drawOverlay(
   if (!ctx) return;
   ctx.clearRect(0, 0, w, h);
 
-  const dot = (pts: Landmark[], color: string, size: number) => {
-    ctx.fillStyle = color;
-    for (const p of pts) {
-      ctx.beginPath();
-      ctx.arc(p.x * w, p.y * h, size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  };
+  const C = mpConns();
 
-  dot(r.face, "#7dd3fc", 1.2);
-  dot(r.pose, "#34d399", 3);
-  dot(r.leftHand, "#fbbf24", 2.5);
-  dot(r.rightHand, "#fb923c", 2.5);
+  // Face mesh + iris.
+  drawConnectors(ctx, r.face, C.FACEMESH_TESSELATION, w, h, "rgba(200,200,200,0.22)", 0.5);
+  if (r.face.length >= 478) {
+    drawDots(ctx, [r.face[468], r.face[473]], w, h, "#ffe603", 2);
+  }
+
+  // Pose skeleton.
+  drawConnectors(ctx, r.pose, C.POSE_CONNECTIONS, w, h, "#00cff7", 3);
+  drawDots(ctx, r.pose, w, h, "#ff0364", 2.5);
+
+  // Hands.
+  drawConnectors(ctx, r.leftHand, C.HAND_CONNECTIONS, w, h, "#eb1064", 4);
+  drawDots(ctx, r.leftHand, w, h, "#00cff7", 2);
+  drawConnectors(ctx, r.rightHand, C.HAND_CONNECTIONS, w, h, "#22c3e3", 4);
+  drawDots(ctx, r.rightHand, w, h, "#ff0364", 2);
 }

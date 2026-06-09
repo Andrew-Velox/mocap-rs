@@ -19,6 +19,8 @@ export interface LandmarkFrame {
   face: Landmark[];
   leftHand: Landmark[];
   rightHand: Landmark[];
+  /** Actual capture resolution — kalidokit needs the real aspect ratio. */
+  imageSize?: { width: number; height: number };
 }
 
 /** Tracking modes the desktop can request from the phone. */
