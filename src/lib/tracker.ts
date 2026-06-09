@@ -79,9 +79,10 @@ export class Tracker {
       locateFile: (file) => `${ASSET_PATH}/${file}`,
     });
     holistic.setOptions({
-      // Heavy pose model — most accurate (SysMoCap's default). Drop to 1 if the
-      // phone can't keep up.
-      modelComplexity: 2,
+      // complexity 1 (full) keeps inference fast (~20-30fps) on CPU/iGPU, which
+      // tracks tighter than complexity 2 stuck at ~8fps. Bump to 2 on a machine
+      // that can sustain it for marginally more accurate joints.
+      modelComplexity: 1,
       smoothLandmarks: true,
       refineFaceLandmarks: true,
       minDetectionConfidence: 0.7,

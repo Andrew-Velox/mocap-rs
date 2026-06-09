@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { isLandmarkFrame } from "../lib/landmarks";
 import { solvePose, type SolvedPose } from "../lib/poseSolver";
-import { LandmarkSmoother } from "../lib/oneEuro";
 
 export interface TrackingFlags {
   pose: boolean;
@@ -27,14 +26,13 @@ export function useLandmarks() {
 
   const fpsWindow = useRef<number[]>([]);
   const lastFpsEmit = useRef(0);
-  // One-Euro filter applied to landmarks before solving — the main jitter fix.
-  const smoother = useRef(new LandmarkSmoother());
 
   const ingest = useCallback((data: unknown) => {
     if (!isLandmarkFrame(data)) return;
 
-    // Smooth raw landmarks in place (adaptive low-pass), then solve.
-    smoother.current.smoothFrame(data, performance.now() / 1000);
+    // No landmark pre-filtering: MediaPipe's `smoothLandmarks` already smooths
+    // temporally, and the per-frame slerp in the controller does the rest —
+    // this matches SysMoCap and avoids the extra latency an added filter causes.
     solvedRef.current = solvePose(data);
 
     const flags: TrackingFlags = {

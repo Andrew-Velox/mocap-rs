@@ -112,8 +112,14 @@ export function AvatarCanvas({ modelUrl, onStatus, onFrame }: AvatarCanvasProps)
         VRMUtils.removeUnnecessaryVertices(gltf.scene);
         VRMUtils.combineSkeletons(gltf.scene);
         vrm.scene.traverse((o) => (o.frustumCulled = false));
-        // Face the camera (VRM 0.x models look -Z; rotate to face +Z viewer).
-        VRMUtils.rotateVRM0(vrm);
+        // Face the camera. VRM 0.x looks -Z by default; rotate the *scene
+        // object* (not the hips bone) 180° so the pose solver can still drive
+        // the hips freely. (Using VRMUtils.rotateVRM0 bakes the turn into the
+        // hips bone, which then fights the per-frame hips slerp and twists the
+        // body off-axis — this matches SysMoCap's approach.)
+        if (vrm.meta?.metaVersion === "0") {
+          vrm.scene.rotation.y = Math.PI;
+        }
         scene.add(vrm.scene);
         currentVrm = vrm;
         onStatusRef.current?.({ kind: "ready", source: "vrm" });
