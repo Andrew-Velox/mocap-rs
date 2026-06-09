@@ -7,7 +7,7 @@ import { PairPanel } from "../components/PairPanel";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useLandmarks } from "../hooks/useLandmarks";
 import { AvatarController } from "../lib/avatarController";
-import type { ModeMessage, TrackingMode } from "../lib/landmarks";
+import { isCalibrateMessage, type ModeMessage, type TrackingMode } from "../lib/landmarks";
 
 const DEFAULT_MODEL = "/models/shino.vrm";
 
@@ -28,7 +28,25 @@ export function Desktop() {
   const [mode, setMode] = useState<TrackingMode>("full");
 
   const { solvedRef, ingest, tracking, inferenceFps } = useLandmarks();
-  const { status, send } = useWebSocket(RELAY_WS_URL, { onMessage: ingest });
+
+  // Controller is (re)created whenever the VRM instance changes.
+  const controllerRef = useRef<AvatarController | null>(null);
+  const controlledVrm = useRef<VRM | null>(null);
+
+  // Inbound messages: landmark frames → solve; calibrate → (re)capture neutral.
+  const onMessage = useCallback(
+    (data: unknown) => {
+      if (isCalibrateMessage(data)) {
+        if (data.reset) controllerRef.current?.clearCalibration();
+        else controllerRef.current?.calibrate();
+        return;
+      }
+      ingest(data);
+    },
+    [ingest]
+  );
+
+  const { status, send } = useWebSocket(RELAY_WS_URL, { onMessage });
 
   // Push tracking-mode changes to the phone over the relay.
   const handleModeChange = useCallback(
@@ -40,9 +58,12 @@ export function Desktop() {
     [send]
   );
 
-  // Controller is (re)created whenever the VRM instance changes.
-  const controllerRef = useRef<AvatarController | null>(null);
-  const controlledVrm = useRef<VRM | null>(null);
+  // Local calibrate controls (also usable when avatar + camera are same device).
+  const calibrate = useCallback(() => controllerRef.current?.calibrate(), []);
+  const resetCalibration = useCallback(
+    () => controllerRef.current?.clearCalibration(),
+    []
+  );
 
   // Render-FPS sampling (publish ~2x/sec).
   const frames = useRef(0);
@@ -82,6 +103,14 @@ export function Desktop() {
           mode={mode}
           onModeChange={handleModeChange}
         />
+        <div className="calib-buttons">
+          <button className="btn" onClick={calibrate} title="Capture your current pose as neutral">
+            Calibrate
+          </button>
+          <button className="btn ghost" onClick={resetCalibration} title="Clear calibration">
+            Reset
+          </button>
+        </div>
       </header>
 
       <div className="stage">

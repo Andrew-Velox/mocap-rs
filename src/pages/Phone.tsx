@@ -3,6 +3,7 @@ import { useWebSocket } from "../hooks/useWebSocket";
 import { Tracker, filterByMode, type DetectResult } from "../lib/tracker";
 import {
   isModeMessage,
+  type CalibrateMessage,
   type LandmarkFrame,
   type Landmark,
   type TrackingMode,
@@ -30,6 +31,8 @@ export function Phone() {
   const [fps, setFps] = useState(0);
   const [mode, setMode] = useState<TrackingMode>("full");
   const [detected, setDetected] = useState({ pose: false, face: false, hands: false });
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownTimer = useRef<number | undefined>(undefined);
 
   modeRef.current = mode;
 
@@ -164,6 +167,32 @@ export function Phone() {
     }
   }, [handleResult, pump]);
 
+  // Calibration: 3-2-1 countdown (so you can strike a neutral pose), then tell
+  // the avatar side to capture the current pose as neutral.
+  const calibrate = useCallback(() => {
+    window.clearInterval(countdownTimer.current);
+    let n = 3;
+    setCountdown(n);
+    countdownTimer.current = window.setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        window.clearInterval(countdownTimer.current);
+        setCountdown(null);
+        const msg: CalibrateMessage = { type: "calibrate" };
+        send(msg);
+      } else {
+        setCountdown(n);
+      }
+    }, 1000);
+  }, [send]);
+
+  const resetCalibration = useCallback(() => {
+    const msg: CalibrateMessage = { type: "calibrate", reset: true };
+    send(msg);
+  }, [send]);
+
+  useEffect(() => () => window.clearInterval(countdownTimer.current), []);
+
   const connected = wsStatus === "open";
 
   return (
@@ -171,6 +200,7 @@ export function Phone() {
       <div className="video-wrap">
         <video ref={videoRef} className="cam" playsInline muted />
         <canvas ref={canvasRef} className="overlay" />
+        {countdown !== null && <div className="countdown">{countdown}</div>}
         {phase !== "running" && (
           <div className="phone-cover">
             {phase === "idle" && (
@@ -210,6 +240,16 @@ export function Phone() {
             .filter(Boolean)
             .join(" · ") || "no tracking"}
         </span>
+        {phase === "running" && (
+          <>
+            <button className="pill btn" onClick={calibrate}>
+              Calibrate
+            </button>
+            <button className="pill btn" onClick={resetCalibration}>
+              Reset
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -29,6 +29,13 @@ export interface ModeMessage {
   mode: TrackingMode;
 }
 
+/** Sent by either end to (re)capture the neutral pose for calibration. */
+export interface CalibrateMessage {
+  type: "calibrate";
+  /** `reset` clears calibration instead of capturing. */
+  reset?: boolean;
+}
+
 export function isLandmarkFrame(v: unknown): v is LandmarkFrame {
   return (
     !!v && typeof v === "object" && (v as { type?: unknown }).type === "landmarks"
@@ -37,4 +44,8 @@ export function isLandmarkFrame(v: unknown): v is LandmarkFrame {
 
 export function isModeMessage(v: unknown): v is ModeMessage {
   return !!v && typeof v === "object" && (v as { type?: unknown }).type === "mode";
+}
+
+export function isCalibrateMessage(v: unknown): v is CalibrateMessage {
+  return !!v && typeof v === "object" && (v as { type?: unknown }).type === "calibrate";
 }

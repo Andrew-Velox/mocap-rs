@@ -36,12 +36,19 @@ const FINGER_MAP: Array<[string, string]> = [
 export class AvatarController {
   private readonly euler = new THREE.Euler();
   private readonly quat = new THREE.Quaternion();
+  private readonly corrected = new THREE.Quaternion();
   private readonly vec = new THREE.Vector3();
   // Smoothed facial blendshape values (lerped toward targets each frame).
   private faceValues: Record<string, number> = {};
   // Smoothed eye-gaze angles (degrees).
   private gazeYaw = 0;
   private gazePitch = 0;
+
+  // Calibration: captured neutral-pose rotation per bone. When active, each
+  // bone's motion is solved *relative* to this neutral so the user's rest pose
+  // maps to the avatar's rest (cancels posture/camera-angle offsets).
+  private neutral = new Map<string, THREE.Quaternion>();
+  private calibState: "off" | "capture" | "active" = "off";
 
   // VRM 1.0 humanoid bones are rotated 180° about Y vs VRM 0.0, so X and Z
   // rotation axes are inverted. Negate them for VRM1 (matches SysMoCap).
@@ -58,6 +65,17 @@ export class AvatarController {
     if (vrm.lookAt) vrm.lookAt.autoUpdate = false;
   }
 
+  /** Capture the current pose as the neutral reference on the next frame. */
+  calibrate() {
+    this.calibState = "capture";
+  }
+
+  /** Forget calibration and track absolute pose again. */
+  clearCalibration() {
+    this.neutral.clear();
+    this.calibState = "off";
+  }
+
   /** Apply the latest solved pose. `delta` is seconds since last frame. */
   apply(solved: SolvedPose, delta: number) {
     const t = 1 - Math.exp(-this.smoothing * delta); // fps-independent lerp
@@ -71,6 +89,9 @@ export class AvatarController {
     if (solved.rightHand) {
       this.applyHand("Right", solved.rightHand, t, solved.pose?.RightHand?.z ?? 0);
     }
+
+    // One full pass captured the neutral; switch to applying it from now on.
+    if (this.calibState === "capture") this.calibState = "active";
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
@@ -78,7 +99,17 @@ export class AvatarController {
     return this.vrm.humanoid.getNormalizedBoneNode(name as VRMHumanBoneName);
   }
 
-  private rigRotation(name: string, rot: XYZ, dampener: number, t: number) {
+  /**
+   * @param calibratable whether this bone participates in neutral-pose
+   *   calibration (body bones yes; fingers/wrist no).
+   */
+  private rigRotation(
+    name: string,
+    rot: XYZ,
+    dampener: number,
+    t: number,
+    calibratable = false
+  ) {
     const node = this.bone(name);
     if (!node) return;
     this.euler.set(
@@ -88,6 +119,22 @@ export class AvatarController {
       "XYZ"
     );
     this.quat.setFromEuler(this.euler);
+
+    if (calibratable) {
+      if (this.calibState === "capture") {
+        // Record this frame's rotation as the neutral reference.
+        this.neutral.set(name, this.quat.clone());
+      } else if (this.calibState === "active") {
+        const ref = this.neutral.get(name);
+        if (ref) {
+          // Solve relative to neutral: corrected = neutral⁻¹ · target.
+          this.corrected.copy(ref).invert().multiply(this.quat);
+          node.quaternion.slerp(this.corrected, t);
+          return;
+        }
+      }
+    }
+
     node.quaternion.slerp(this.quat, t);
   }
 
@@ -100,7 +147,7 @@ export class AvatarController {
 
   // ── pose ─────────────────────────────────────────────────────────────────
   private applyPose(pose: NonNullable<SolvedPose["pose"]>, t: number) {
-    if (pose.Hips.rotation) this.rigRotation("hips", pose.Hips.rotation, 0.7, t);
+    if (pose.Hips.rotation) this.rigRotation("hips", pose.Hips.rotation, 0.7, t, true);
     this.rigPosition(
       "hips",
       {
@@ -112,28 +159,28 @@ export class AvatarController {
       t * 0.5
     );
 
-    this.rigRotation("chest", pose.Spine, 0.25, t);
-    this.rigRotation("spine", pose.Spine, 0.45, t);
+    this.rigRotation("chest", pose.Spine, 0.25, t, true);
+    this.rigRotation("spine", pose.Spine, 0.45, t, true);
 
-    this.rigRotation("rightUpperArm", pose.RightUpperArm, 1, t);
-    this.rigRotation("rightLowerArm", pose.RightLowerArm, 1, t);
-    this.rigRotation("leftUpperArm", pose.LeftUpperArm, 1, t);
-    this.rigRotation("leftLowerArm", pose.LeftLowerArm, 1, t);
+    this.rigRotation("rightUpperArm", pose.RightUpperArm, 1, t, true);
+    this.rigRotation("rightLowerArm", pose.RightLowerArm, 1, t, true);
+    this.rigRotation("leftUpperArm", pose.LeftUpperArm, 1, t, true);
+    this.rigRotation("leftLowerArm", pose.LeftLowerArm, 1, t, true);
 
     // Wrist from pose (overridden below when hand tracking is present).
     this.rigRotation("leftHand", pose.LeftHand, 1, t);
     this.rigRotation("rightHand", pose.RightHand, 1, t);
 
-    this.rigRotation("rightUpperLeg", pose.RightUpperLeg, 1, t);
-    this.rigRotation("rightLowerLeg", pose.RightLowerLeg, 1, t);
-    this.rigRotation("leftUpperLeg", pose.LeftUpperLeg, 1, t);
-    this.rigRotation("leftLowerLeg", pose.LeftLowerLeg, 1, t);
+    this.rigRotation("rightUpperLeg", pose.RightUpperLeg, 1, t, true);
+    this.rigRotation("rightLowerLeg", pose.RightLowerLeg, 1, t, true);
+    this.rigRotation("leftUpperLeg", pose.LeftUpperLeg, 1, t, true);
+    this.rigRotation("leftLowerLeg", pose.LeftLowerLeg, 1, t, true);
   }
 
   // ── face ─────────────────────────────────────────────────────────────────
   private applyFace(face: TFace, t: number) {
     // Head orientation.
-    this.rigRotation("neck", face.head, 0.7, t);
+    this.rigRotation("neck", face.head, 0.7, t, true);
 
     const em = this.vrm.expressionManager;
     if (em) {
