@@ -1,0 +1,5 @@
+{
+  "models": [
+    { "name": "Default avatar", "file": "avatar.vrm" }
+  ]
+}

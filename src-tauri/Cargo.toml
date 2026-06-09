@@ -1,0 +1,60 @@
+[package]
+name = "mocap-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Real-time motion capture + VRM avatar animation relay server"
+license = "MIT"
+# `cargo run` (no --bin) launches the headless relay. The Tauri app bin is
+# gated behind the `tauri-app` feature and run via `npm run tauri dev`.
+default-run = "mocap-server"
+
+# The reusable server lives in the library so both the standalone dev binary
+# (Phase 1) and the Tauri app (Phase 2+) can spawn the exact same server.
+[lib]
+name = "mocap_rs"
+path = "src/lib.rs"
+
+# Headless dev runner: `cargo run` boots the relay server with no GUI.
+# This is the default build and needs no system GUI libraries.
+[[bin]]
+name = "mocap-server"
+path = "src/main.rs"
+
+# The Tauri desktop app. Compiles only with `--features tauri-app`, which
+# requires webkit2gtk-4.1 on Linux. It spawns the same `mocap_rs::server::run`.
+[[bin]]
+name = "mocap-rs-app"
+path = "src/app.rs"
+required-features = ["tauri-app"]
+
+[features]
+default = []
+tauri-app = ["dep:tauri", "dep:tauri-build"]
+
+[dependencies]
+tauri = { version = "2", optional = true }
+axum = { version = "0.7", features = ["ws"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "fs", "trace", "set-header"] }
+tower = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+futures-util = "0.3"
+rcgen = "0.13"
+uuid = { version = "1", features = ["v4"] }
+qrcode = "0.14"
+local-ip-address = "0.6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Only pulled in for the `tauri-app` feature (needs webkit2gtk-4.1 on Linux).
+[build-dependencies]
+tauri-build = { version = "2", optional = true }
+
+[profile.release]
+opt-level = "z"     # keep the binary small
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

@@ -1,0 +1,330 @@
+:root {
+  --bg: #0d0f14;
+  --panel: #161a22;
+  --panel-2: #1c2230;
+  --border: #232838;
+  --text: #e6e6e6;
+  --muted: #8a93a6;
+  --accent: #7dd3fc;
+  --accent-2: #5b8cff;
+  --good: #34d399;
+  --bad: #f87171;
+  --warn: #fbbf24;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ── Desktop layout ──────────────────────────────────────────────────────── */
+.desktop {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(180deg, var(--panel), transparent);
+  user-select: none;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ── Controls (avatar + tracking mode) ───────────────────────────────────── */
+.controls {
+  margin-left: auto;
+  display: flex;
+  gap: 0.75rem;
+}
+.control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.control select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.control select:focus {
+  outline: 1px solid var(--accent);
+}
+
+/* ── Pair panel ──────────────────────────────────────────────────────────── */
+.pair-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 17rem;
+  padding: 0.9rem;
+  background: rgba(22, 26, 34, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  z-index: 5;
+}
+.pair-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+.pair-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.pair-qr {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.pair-url {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--accent);
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+.pair-meta {
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.pair-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.pair-hint a {
+  color: var(--accent);
+}
+.pair-fab {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 5;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(22, 26, 34, 0.92);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.avatar-canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background:
+    radial-gradient(80% 80% at 50% 30%, #161d2b 0%, var(--bg) 70%);
+}
+
+.avatar-canvas canvas {
+  display: block;
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────────── */
+.status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.5rem 1rem;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.status-group .label {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.status-group .value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.on {
+  background: var(--good);
+  box-shadow: 0 0 8px var(--good);
+}
+.dot.off {
+  background: var(--bad);
+}
+
+.tag {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.tag.on {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Phone capture ───────────────────────────────────────────────────────── */
+.phone {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: #000;
+}
+
+.video-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Mirror the selfie view so movement feels natural. */
+.cam,
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.overlay {
+  pointer-events: none;
+}
+
+.phone-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(13, 15, 20, 0.82);
+  backdrop-filter: blur(6px);
+}
+.phone-cover h1 {
+  margin: 0;
+  font-size: 2rem;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.phone-cover p {
+  color: var(--muted);
+  margin: 0;
+}
+.phone-cover .err {
+  color: var(--bad);
+}
+.phone-cover .loading::after {
+  content: "…";
+}
+
+.start-btn {
+  margin-top: 0.5rem;
+  padding: 0.9rem 2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #06121f;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.start-btn:active {
+  transform: scale(0.97);
+}
+
+.phone-hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem calc(0.6rem + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+.pill {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.pill.on {
+  color: var(--good);
+  border-color: var(--good);
+}
+.pill.off {
+  color: var(--warn);
+}

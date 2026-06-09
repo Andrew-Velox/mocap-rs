@@ -1,0 +1,32 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Build output ────────────────────────────────────────────────────────────
+dist/
+dist-ssr/
+*.local
+
+# ─── Rust / Tauri ────────────────────────────────────────────────────────────
+src-tauri/target/
+src-tauri/gen/
+
+# ─── Large runtime assets (NOT committed — run `npm run fetch-assets`) ────────
+# MediaPipe model files (~21 MB) downloaded from Google.
+public/models/mediapipe/
+# MediaPipe WASM runtime (~30 MB) copied from node_modules.
+public/mediapipe/wasm/
+# Sample VRM avatar (~10 MB). Keep models/index.json (it's config, committed).
+public/models/*.vrm
+
+# ─── Logs / caches ───────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vite/
+
+# ─── Editor / OS ─────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
