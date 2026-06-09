@@ -79,11 +79,13 @@ export class Tracker {
       locateFile: (file) => `${ASSET_PATH}/${file}`,
     });
     holistic.setOptions({
-      modelComplexity: 1,
+      // Heavy pose model — most accurate (SysMoCap's default). Drop to 1 if the
+      // phone can't keep up.
+      modelComplexity: 2,
       smoothLandmarks: true,
       refineFaceLandmarks: true,
-      minDetectionConfidence: 0.6,
-      minTrackingConfidence: 0.6,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7,
     } as Options);
 
     const tracker = new Tracker(holistic);

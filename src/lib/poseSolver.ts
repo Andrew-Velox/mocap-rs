@@ -19,6 +19,12 @@ const IMAGE_SIZE = { width: 1280, height: 720 };
 export function solvePose(frame: LandmarkFrame): SolvedPose {
   const out: SolvedPose = {};
 
+  // MediaPipe Holistic labels the hands reversed relative to the body, so the
+  // hand it calls "left" is actually the person's right hand. Swap to get
+  // anatomically-correct hands (matches SysMoCap's known fix).
+  const leftHandLm = frame.rightHand;
+  const rightHandLm = frame.leftHand;
+
   if (frame.pose.length > 0) {
     // Legacy Holistic world landmarks already match kalidokit's expected
     // convention — no axis remapping needed.
@@ -34,7 +40,7 @@ export function solvePose(frame: LandmarkFrame): SolvedPose {
       // Limbs that aren't confidently visible (e.g. out of frame) get garbage
       // rotations from MediaPipe. Relax those back to the rest pose by zeroing
       // them, rather than flailing the avatar (the controller slerps to rest).
-      relaxUntracked(pose, frame);
+      relaxUntracked(pose, frame, leftHandLm.length > 0, rightHandLm.length > 0);
       out.pose = pose;
     }
   }
@@ -48,11 +54,11 @@ export function solvePose(frame: LandmarkFrame): SolvedPose {
       }) ?? undefined;
   }
 
-  if (frame.leftHand.length > 0) {
-    out.leftHand = Kalidokit.Hand.solve(frame.leftHand, "Left") ?? undefined;
+  if (leftHandLm.length > 0) {
+    out.leftHand = Kalidokit.Hand.solve(leftHandLm, "Left") ?? undefined;
   }
-  if (frame.rightHand.length > 0) {
-    out.rightHand = Kalidokit.Hand.solve(frame.rightHand, "Right") ?? undefined;
+  if (rightHandLm.length > 0) {
+    out.rightHand = Kalidokit.Hand.solve(rightHandLm, "Right") ?? undefined;
   }
 
   return out;
@@ -94,21 +100,20 @@ function zero(target: { x: number; y: number; z: number }) {
 }
 
 /** Zero the rotations of limbs whose landmarks aren't confidently visible. */
-function relaxUntracked(pose: Kalidokit.TPose, frame: LandmarkFrame) {
+function relaxUntracked(
+  pose: Kalidokit.TPose,
+  frame: LandmarkFrame,
+  leftHandPresent: boolean,
+  rightHandPresent: boolean
+) {
   // If a hand is detected, keep its arm active even at lower pose visibility —
   // otherwise the arm parks at rest while the hand wiggles ("doesn't follow").
-  if (
-    frame.leftHand.length === 0 &&
-    avgVisibility(frame, [LM.leftElbow, LM.leftWrist]) < VIS_THRESHOLD
-  ) {
+  if (!leftHandPresent && avgVisibility(frame, [LM.leftElbow, LM.leftWrist]) < VIS_THRESHOLD) {
     zero(pose.LeftUpperArm);
     zero(pose.LeftLowerArm);
     Object.assign(pose.LeftHand, ZERO);
   }
-  if (
-    frame.rightHand.length === 0 &&
-    avgVisibility(frame, [LM.rightElbow, LM.rightWrist]) < VIS_THRESHOLD
-  ) {
+  if (!rightHandPresent && avgVisibility(frame, [LM.rightElbow, LM.rightWrist]) < VIS_THRESHOLD) {
     zero(pose.RightUpperArm);
     zero(pose.RightLowerArm);
     Object.assign(pose.RightHand, ZERO);

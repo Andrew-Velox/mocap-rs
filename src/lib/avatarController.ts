@@ -11,6 +11,9 @@ import type { TFace, THand } from "kalidokit";
 type XYZ = { x?: number; y?: number; z?: number };
 type Side = "Left" | "Right";
 
+// Max eye-gaze deflection (degrees) mapped from the normalized iris position.
+const GAZE_DEG = 22;
+
 // kalidokit finger key → VRM bone suffix (VRM1 renames the thumb chain).
 const FINGER_MAP: Array<[string, string]> = [
   ["ThumbProximal", "ThumbMetacarpal"],
@@ -36,12 +39,24 @@ export class AvatarController {
   private readonly vec = new THREE.Vector3();
   // Smoothed facial blendshape values (lerped toward targets each frame).
   private faceValues: Record<string, number> = {};
+  // Smoothed eye-gaze angles (degrees).
+  private gazeYaw = 0;
+  private gazePitch = 0;
+
+  // VRM 1.0 humanoid bones are rotated 180° about Y vs VRM 0.0, so X and Z
+  // rotation axes are inverted. Negate them for VRM1 (matches SysMoCap).
+  private readonly axisSign: number;
 
   /** `smoothing` ~= responsiveness; higher snaps faster. */
   constructor(
     private readonly vrm: VRM,
     private readonly smoothing = 14
-  ) {}
+  ) {
+    this.axisSign = vrm.meta?.metaVersion === "1" ? -1 : 1;
+    // We drive gaze manually each frame via applyYawPitch; disable auto lookAt
+    // so vrm.update() doesn't overwrite it.
+    if (vrm.lookAt) vrm.lookAt.autoUpdate = false;
+  }
 
   /** Apply the latest solved pose. `delta` is seconds since last frame. */
   apply(solved: SolvedPose, delta: number) {
@@ -67,9 +82,9 @@ export class AvatarController {
     const node = this.bone(name);
     if (!node) return;
     this.euler.set(
-      (rot.x ?? 0) * dampener,
+      this.axisSign * (rot.x ?? 0) * dampener,
       (rot.y ?? 0) * dampener,
-      (rot.z ?? 0) * dampener,
+      this.axisSign * (rot.z ?? 0) * dampener,
       "XYZ"
     );
     this.quat.setFromEuler(this.euler);
@@ -89,9 +104,9 @@ export class AvatarController {
     this.rigPosition(
       "hips",
       {
-        x: -pose.Hips.position.x, // mirror so the avatar faces the user
-        y: pose.Hips.position.y + 1,
-        z: -pose.Hips.position.z,
+        x: pose.Hips.position.x,
+        y: pose.Hips.position.y + 1, // lift to standing height
+        z: -pose.Hips.position.z, // reverse depth (matches SysMoCap)
       },
       1,
       t * 0.5
@@ -117,28 +132,39 @@ export class AvatarController {
 
   // ── face ─────────────────────────────────────────────────────────────────
   private applyFace(face: TFace, t: number) {
-    // Head orientation (split across neck for a natural bend).
+    // Head orientation.
     this.rigRotation("neck", face.head, 0.7, t);
 
     const em = this.vrm.expressionManager;
-    if (!em) return;
+    if (em) {
+      const set = (name: string, target: number) => {
+        const prev = this.faceValues[name] ?? 0;
+        const next = THREE.MathUtils.lerp(prev, THREE.MathUtils.clamp(target, 0, 1), t);
+        this.faceValues[name] = next;
+        em.setValue(name, next);
+      };
 
-    const set = (name: string, target: number) => {
-      const prev = this.faceValues[name] ?? 0;
-      const next = THREE.MathUtils.lerp(prev, THREE.MathUtils.clamp(target, 0, 1), t);
-      this.faceValues[name] = next;
-      em.setValue(name, next);
-    };
+      // Per-eye blink: kalidokit reports openness (1 open) → VRM blink (1
+      // closed). The /0.8 makes a full blink actually close (SysMoCap trick).
+      set("blinkLeft", (1 - face.eye.l) / 0.8);
+      set("blinkRight", (1 - face.eye.r) / 0.8);
 
-    // Eyes: kalidokit reports openness (1 open) → VRM blink (1 closed).
-    set("blink", 1 - (face.eye.l + face.eye.r) / 2);
+      // Mouth visemes.
+      set("aa", face.mouth.shape.A / 0.8);
+      set("ih", face.mouth.shape.I / 0.8);
+      set("ou", face.mouth.shape.U / 0.8);
+      set("ee", face.mouth.shape.E / 0.8);
+      set("oh", face.mouth.shape.O / 0.8);
+    }
 
-    // Mouth visemes.
-    set("aa", face.mouth.shape.A);
-    set("ih", face.mouth.shape.I);
-    set("ou", face.mouth.shape.U);
-    set("ee", face.mouth.shape.E);
-    set("oh", face.mouth.shape.O);
+    // Eye gaze from the iris (degrees). autoUpdate is disabled in the ctor so
+    // this sticks across vrm.update().
+    const lookAt = this.vrm.lookAt;
+    if (lookAt && face.pupil) {
+      this.gazeYaw = THREE.MathUtils.lerp(this.gazeYaw, face.pupil.x * GAZE_DEG, t);
+      this.gazePitch = THREE.MathUtils.lerp(this.gazePitch, -face.pupil.y * GAZE_DEG, t);
+      lookAt.applier.applyYawPitch(this.gazeYaw, this.gazePitch);
+    }
   }
 
   // ── hands ────────────────────────────────────────────────────────────────
