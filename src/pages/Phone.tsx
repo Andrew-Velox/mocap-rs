@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWebSocket } from "../hooks/useWebSocket";
-import { Tracker } from "../lib/tracker";
+import { Tracker, filterByMode, type DetectResult } from "../lib/tracker";
 import {
   isModeMessage,
   type LandmarkFrame,
@@ -21,7 +21,8 @@ export function Phone() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const trackerRef = useRef<Tracker | null>(null);
   const rafRef = useRef(0);
-  const lastTsRef = useRef(0);
+  const rvfcRef = useRef(0);
+  const runningRef = useRef(false);
   const modeRef = useRef<TrackingMode>("full");
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -46,8 +47,15 @@ export function Phone() {
   const { status: wsStatus, send } = useWebSocket(wsUrl, { onMessage });
 
   const stop = useCallback(() => {
+    runningRef.current = false;
     cancelAnimationFrame(rafRef.current);
-    trackerRef.current?.close();
+    const v0 = videoRef.current as (HTMLVideoElement & {
+      cancelVideoFrameCallback?: (h: number) => void;
+    }) | null;
+    if (rvfcRef.current && v0?.cancelVideoFrameCallback) {
+      v0.cancelVideoFrameCallback(rvfcRef.current);
+    }
+    void trackerRef.current?.close();
     trackerRef.current = null;
     const v = videoRef.current;
     const stream = v?.srcObject as MediaStream | null;
@@ -58,12 +66,83 @@ export function Phone() {
 
   useEffect(() => () => stop(), [stop]);
 
+  // ── Detection + stream loop ────────────────────────────────────────────
+  const fpsWindow = useRef<number[]>([]);
+  const lastHudEmit = useRef(0);
+
+  // Schedule the next frame push once per real *camera* frame when possible
+  // (lower latency, no wasted work on duplicate frames).
+  const schedule = useCallback((cb: () => void) => {
+    const v = videoRef.current as HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: () => void) => number;
+    };
+    if (v?.requestVideoFrameCallback) {
+      rvfcRef.current = v.requestVideoFrameCallback(() => cb());
+    } else {
+      rafRef.current = requestAnimationFrame(() => cb());
+    }
+  }, []);
+
+  // Holistic delivers results via callback (not a sync return). Build the
+  // landmark frame here, stream it, draw the overlay, and throttle HUD state.
+  const handleResult = useCallback(
+    (raw: DetectResult) => {
+      const r = filterByMode(raw, modeRef.current);
+
+      const frame: LandmarkFrame = {
+        type: "landmarks",
+        timestamp: Date.now(),
+        pose: r.pose,
+        poseWorld: r.poseWorld,
+        face: r.face,
+        leftHand: r.leftHand,
+        rightHand: r.rightHand,
+      };
+      send(frame);
+
+      const video = videoRef.current;
+      if (video) drawOverlay(canvasRef.current, video, r);
+
+      const now = performance.now();
+      const w = fpsWindow.current;
+      w.push(now);
+      while (w.length && now - w[0] > 1000) w.shift();
+      if (now - lastHudEmit.current > 333) {
+        lastHudEmit.current = now;
+        setFps(w.length);
+        setDetected({
+          pose: r.pose.length > 0,
+          face: r.face.length > 0,
+          hands: r.leftHand.length > 0 || r.rightHand.length > 0,
+        });
+      }
+    },
+    [send]
+  );
+
+  // Feed frames to Holistic one at a time (await serializes inference).
+  const pump = useCallback(async () => {
+    if (!runningRef.current) return;
+    const video = videoRef.current;
+    const tracker = trackerRef.current;
+    if (video && tracker && video.readyState >= 2) {
+      try {
+        await tracker.send(video);
+      } catch {
+        /* transient send error — keep going */
+      }
+    }
+    if (runningRef.current) schedule(pump);
+  }, [schedule]);
+
   const start = useCallback(async () => {
     setPhase("starting");
     setStatusMsg("requesting camera…");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+        // Higher resolution → more precise landmarks (MediaPipe accuracy scales
+        // with input size). The phone downscales internally as needed.
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       const video = videoRef.current!;
@@ -71,62 +150,19 @@ export function Phone() {
       await video.play();
 
       setStatusMsg("loading models…");
-      trackerRef.current = await Tracker.create(setStatusMsg);
+      const tracker = await Tracker.create(setStatusMsg);
+      tracker.onResult(handleResult);
+      trackerRef.current = tracker;
 
+      runningRef.current = true;
       setPhase("running");
-      loop();
+      pump();
     } catch (e) {
       console.error(e);
       setStatusMsg(e instanceof Error ? e.message : "failed to start");
       setPhase("error");
     }
-  }, []);
-
-  // ── Detection + stream loop ────────────────────────────────────────────
-  const fpsWindow = useRef<number[]>([]);
-  const loop = useCallback(() => {
-    const video = videoRef.current;
-    const tracker = trackerRef.current;
-    if (!video || !tracker || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(loop);
-      return;
-    }
-
-    // MediaPipe requires strictly increasing timestamps.
-    let ts = performance.now();
-    if (ts <= lastTsRef.current) ts = lastTsRef.current + 1;
-    lastTsRef.current = ts;
-
-    const r = tracker.detect(video, ts, modeRef.current);
-
-    const frame: LandmarkFrame = {
-      type: "landmarks",
-      timestamp: Date.now(),
-      pose: r.pose,
-      poseWorld: r.poseWorld,
-      face: r.face,
-      leftHand: r.leftHand,
-      rightHand: r.rightHand,
-    };
-    send(frame);
-
-    drawOverlay(canvasRef.current, video, r);
-
-    setDetected({
-      pose: r.pose.length > 0,
-      face: r.face.length > 0,
-      hands: r.leftHand.length > 0 || r.rightHand.length > 0,
-    });
-
-    // FPS over a sliding 1s window.
-    const now = performance.now();
-    const w = fpsWindow.current;
-    w.push(now);
-    while (w.length && now - w[0] > 1000) w.shift();
-    setFps(w.length);
-
-    rafRef.current = requestAnimationFrame(loop);
-  }, [send]);
+  }, [handleResult, pump]);
 
   const connected = wsStatus === "open";
 

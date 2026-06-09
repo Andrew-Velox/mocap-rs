@@ -49,24 +49,34 @@ class OneEuroFilter {
  * through untouched. Falls back gracefully when arrays grow/shrink between
  * frames (e.g. tracking drops out).
  */
+// Per-stream tuning. Faces are already stable and expression latency is very
+// visible, so smooth them lightly (high cutoff). Hands move fast and jitter
+// most, so smooth them harder but with higher beta to stay responsive.
+const STREAM_PARAMS: Record<string, Partial<OneEuroParams>> = {
+  face: { minCutoff: 2.5, beta: 0.02 },
+  pose: { minCutoff: 1.0, beta: 0.03 },
+  poseWorld: { minCutoff: 1.0, beta: 0.03 },
+  leftHand: { minCutoff: 1.0, beta: 0.05 },
+  rightHand: { minCutoff: 1.0, beta: 0.05 },
+};
+
 export class LandmarkSmoother {
   private filters = new Map<string, OneEuroFilter>();
   private lastT = 0;
-  private params: OneEuroParams;
+  private base: OneEuroParams;
 
   constructor(params: Partial<OneEuroParams> = {}) {
-    this.params = { ...DEFAULTS, ...params };
+    this.base = { ...DEFAULTS, ...params };
   }
 
-  /** Update tuning at runtime. */
-  setParams(params: Partial<OneEuroParams>) {
-    this.params = { ...this.params, ...params };
+  private paramsFor(stream: string): OneEuroParams {
+    return { ...this.base, ...(STREAM_PARAMS[stream] ?? {}) };
   }
 
-  private f(key: string): OneEuroFilter {
+  private f(stream: string, key: string): OneEuroFilter {
     let filter = this.filters.get(key);
     if (!filter) {
-      filter = new OneEuroFilter(this.params);
+      filter = new OneEuroFilter(this.paramsFor(stream));
       this.filters.set(key, filter);
     }
     return filter;
@@ -79,9 +89,9 @@ export class LandmarkSmoother {
   ) {
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i];
-      p.x = this.f(`${stream}:${i}:x`).filter(p.x, dt);
-      p.y = this.f(`${stream}:${i}:y`).filter(p.y, dt);
-      p.z = this.f(`${stream}:${i}:z`).filter(p.z, dt);
+      p.x = this.f(stream, `${stream}:${i}:x`).filter(p.x, dt);
+      p.y = this.f(stream, `${stream}:${i}:y`).filter(p.y, dt);
+      p.z = this.f(stream, `${stream}:${i}:z`).filter(p.z, dt);
     }
   }
 

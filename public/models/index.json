@@ -1,5 +1,7 @@
 {
   "models": [
-    { "name": "Default avatar", "file": "avatar.vrm" }
+    { "name": "Shino", "file": "shino.vrm" },
+    { "name": "VRoid F", "file": "fem.vrm" },
+    { "name": "Orion", "file": "orion.vrm" }
   ]
 }

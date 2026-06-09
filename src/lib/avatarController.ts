@@ -48,8 +48,14 @@ export class AvatarController {
     const t = 1 - Math.exp(-this.smoothing * delta); // fps-independent lerp
     if (solved.pose) this.applyPose(solved.pose, t);
     if (solved.face) this.applyFace(solved.face, t);
-    if (solved.leftHand) this.applyHand("Left", solved.leftHand, t);
-    if (solved.rightHand) this.applyHand("Right", solved.rightHand, t);
+    // Canonical kalidokit hand mapping: wrist pitch/yaw from the hand solve,
+    // twist (z) from the arm/pose solve; fingers from the hand solve.
+    if (solved.leftHand) {
+      this.applyHand("Left", solved.leftHand, t, solved.pose?.LeftHand?.z ?? 0);
+    }
+    if (solved.rightHand) {
+      this.applyHand("Right", solved.rightHand, t, solved.pose?.RightHand?.z ?? 0);
+    }
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
@@ -136,14 +142,20 @@ export class AvatarController {
   }
 
   // ── hands ────────────────────────────────────────────────────────────────
-  private applyHand(side: Side, hand: THand<"Left"> | THand<"Right">, t: number) {
+  private applyHand(
+    side: Side,
+    hand: THand<"Left"> | THand<"Right">,
+    t: number,
+    wristTwistZ: number
+  ) {
     const h = hand as Record<string, XYZ>;
     const sideLc = side.toLowerCase();
 
-    // Wrist.
-    this.rigRotation(`${sideLc}Hand`, h[`${side}Wrist`], 1, t);
+    // Wrist: pitch/yaw from the hand solve, twist (z) from the arm/pose solve.
+    const wrist = h[`${side}Wrist`];
+    this.rigRotation(`${sideLc}Hand`, { x: wrist.x, y: wrist.y, z: wristTwistZ }, 1, t);
 
-    // Fingers.
+    // Fingers (kalidokit curls them on Z, per-side sign already applied).
     for (const [kkey, vrmSuffix] of FINGER_MAP) {
       const rot = h[`${side}${kkey}`];
       if (!rot) continue;

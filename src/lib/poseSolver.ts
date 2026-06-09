@@ -12,15 +12,16 @@ export interface SolvedPose {
   rightHand?: Kalidokit.THand<"Right">;
 }
 
-// kalidokit's mediapipe runtime uses image size for a couple of normalizations.
-// The phone captures at ~640x480; this only needs to be roughly proportional.
-const IMAGE_SIZE = { width: 640, height: 480 };
+// kalidokit's mediapipe runtime uses image size for a couple of normalizations
+// (mainly head position). Match the phone capture aspect ratio (16:9 @ 720p).
+const IMAGE_SIZE = { width: 1280, height: 720 };
 
 export function solvePose(frame: LandmarkFrame): SolvedPose {
   const out: SolvedPose = {};
 
   if (frame.pose.length > 0) {
-    // Prefer metric world landmarks for 3D; fall back to normalized.
+    // Legacy Holistic world landmarks already match kalidokit's expected
+    // convention — no axis remapping needed.
     const lm3d = frame.poseWorld && frame.poseWorld.length ? frame.poseWorld : frame.pose;
     const pose =
       Kalidokit.Pose.solve(lm3d, frame.pose, {
@@ -94,12 +95,20 @@ function zero(target: { x: number; y: number; z: number }) {
 
 /** Zero the rotations of limbs whose landmarks aren't confidently visible. */
 function relaxUntracked(pose: Kalidokit.TPose, frame: LandmarkFrame) {
-  if (avgVisibility(frame, [LM.leftElbow, LM.leftWrist]) < VIS_THRESHOLD) {
+  // If a hand is detected, keep its arm active even at lower pose visibility —
+  // otherwise the arm parks at rest while the hand wiggles ("doesn't follow").
+  if (
+    frame.leftHand.length === 0 &&
+    avgVisibility(frame, [LM.leftElbow, LM.leftWrist]) < VIS_THRESHOLD
+  ) {
     zero(pose.LeftUpperArm);
     zero(pose.LeftLowerArm);
     Object.assign(pose.LeftHand, ZERO);
   }
-  if (avgVisibility(frame, [LM.rightElbow, LM.rightWrist]) < VIS_THRESHOLD) {
+  if (
+    frame.rightHand.length === 0 &&
+    avgVisibility(frame, [LM.rightElbow, LM.rightWrist]) < VIS_THRESHOLD
+  ) {
     zero(pose.RightUpperArm);
     zero(pose.RightLowerArm);
     Object.assign(pose.RightHand, ZERO);

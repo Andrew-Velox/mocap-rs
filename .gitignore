@@ -13,8 +13,8 @@ src-tauri/gen/
 # ─── Large runtime assets (NOT committed — run `npm run fetch-assets`) ────────
 # MediaPipe model files (~21 MB) downloaded from Google.
 public/models/mediapipe/
-# MediaPipe WASM runtime (~30 MB) copied from node_modules.
-public/mediapipe/wasm/
+# MediaPipe runtime/assets (~60 MB) copied from node_modules.
+public/mediapipe/
 # Sample VRM avatar (~10 MB). Keep models/index.json (it's config, committed).
 public/models/*.vrm
 

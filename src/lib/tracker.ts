@@ -1,22 +1,46 @@
-// MediaPipe Tasks Vision wrapper. Runs entirely in the phone browser on the
-// GPU (WebGL) — never on the desktop. Loads the WASM runtime + .task models
-// from the local origin so it works fully offline.
+// MediaPipe Holistic (legacy @mediapipe/holistic) — the same stack SysMoCap and
+// Kalidokit were built for. Runs entirely in the phone browser. Loads its WASM
+// + model assets from the local origin so it works fully offline.
+//
+// We deliberately use the *legacy* Holistic rather than the new Tasks
+// HolisticLandmarker: Kalidokit's solvers expect this library's exact landmark
+// coordinate conventions, so the canonical rig mapping works without axis hacks.
 
-import {
-  FilesetResolver,
-  PoseLandmarker,
-  FaceLandmarker,
-  HandLandmarker,
-  type NormalizedLandmark,
-} from "@mediapipe/tasks-vision";
+// Types only — the runtime is loaded via a <script> tag (see loadHolistic).
+// @mediapipe/holistic is a UMD bundle that attaches `Holistic` to the global
+// (its CDN usage), so an ESM import would be undefined at runtime.
+import type { Holistic, Results, NormalizedLandmark, Options } from "@mediapipe/holistic";
 import type { Landmark, TrackingMode } from "./landmarks";
 
-const WASM_PATH = "/mediapipe/wasm";
-const MODELS = {
-  pose: "/models/mediapipe/pose_landmarker_full.task",
-  face: "/models/mediapipe/face_landmarker.task",
-  hand: "/models/mediapipe/hand_landmarker.task",
-};
+const ASSET_PATH = "/mediapipe/holistic";
+
+type HolisticCtor = new (config: { locateFile: (f: string) => string }) => Holistic;
+
+declare global {
+  interface Window {
+    Holistic?: HolisticCtor;
+  }
+}
+
+let scriptPromise: Promise<HolisticCtor> | null = null;
+
+/** Load holistic.js once and resolve the global constructor. */
+function loadHolistic(): Promise<HolisticCtor> {
+  if (window.Holistic) return Promise.resolve(window.Holistic);
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = `${ASSET_PATH}/holistic.js`;
+    s.crossOrigin = "anonymous";
+    s.onload = () =>
+      window.Holistic
+        ? resolve(window.Holistic)
+        : reject(new Error("holistic.js loaded but window.Holistic missing"));
+    s.onerror = () => reject(new Error("failed to load holistic.js"));
+    document.head.appendChild(s);
+  });
+  return scriptPromise;
+}
 
 export interface DetectResult {
   pose: Landmark[];
@@ -36,96 +60,70 @@ function toLandmarks(src: NormalizedLandmark[] | undefined): Landmark[] {
   }));
 }
 
+// World landmarks aren't in the public typings; this build exposes them on the
+// minified `za` property (graph stream "world_landmarks"). Probe robustly.
+function worldLandmarks(results: Results): NormalizedLandmark[] | undefined {
+  const r = results as unknown as Record<string, NormalizedLandmark[] | undefined>;
+  return r.za ?? r.poseWorldLandmarks ?? r.ea;
+}
+
 export class Tracker {
-  private constructor(
-    private pose: PoseLandmarker,
-    private face: FaceLandmarker,
-    private hand: HandLandmarker
-  ) {}
+  private listener?: (r: DetectResult) => void;
 
-  static async create(
-    onProgress?: (msg: string) => void
-  ): Promise<Tracker> {
-    onProgress?.("loading runtime");
-    const vision = await FilesetResolver.forVisionTasks(WASM_PATH);
+  private constructor(private holistic: Holistic) {}
 
-    // GPU delegate; falls back internally to CPU if WebGL is unavailable.
-    onProgress?.("loading pose model");
-    const pose = await PoseLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: MODELS.pose, delegate: "GPU" },
-      runningMode: "VIDEO",
-      numPoses: 1,
-      // Higher confidence = fewer spurious/ghost detections that cause flicker.
-      minPoseDetectionConfidence: 0.6,
-      minPosePresenceConfidence: 0.6,
-      minTrackingConfidence: 0.6,
+  static async create(onProgress?: (msg: string) => void): Promise<Tracker> {
+    onProgress?.("loading holistic");
+    const HolisticCtor = await loadHolistic();
+    const holistic = new HolisticCtor({
+      locateFile: (file) => `${ASSET_PATH}/${file}`,
     });
-
-    onProgress?.("loading face model");
-    const face = await FaceLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: MODELS.face, delegate: "GPU" },
-      runningMode: "VIDEO",
-      numFaces: 1,
-      minFaceDetectionConfidence: 0.6,
-      minFacePresenceConfidence: 0.6,
+    holistic.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      refineFaceLandmarks: true,
+      minDetectionConfidence: 0.6,
       minTrackingConfidence: 0.6,
-    });
+    } as Options);
 
-    onProgress?.("loading hand model");
-    const hand = await HandLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: MODELS.hand, delegate: "GPU" },
-      runningMode: "VIDEO",
-      numHands: 2,
-      minHandDetectionConfidence: 0.6,
-      minHandPresenceConfidence: 0.6,
-      minTrackingConfidence: 0.6,
-    });
+    const tracker = new Tracker(holistic);
+    holistic.onResults((results) => tracker.handle(results));
 
+    onProgress?.("initializing (downloading models)…");
+    await holistic.initialize();
     onProgress?.("ready");
-    return new Tracker(pose, face, hand);
+    return tracker;
   }
 
-  /** Run the enabled landmarkers for `mode` against the current video frame. */
-  detect(video: HTMLVideoElement, ts: number, mode: TrackingMode): DetectResult {
-    const out: DetectResult = {
-      pose: [],
-      poseWorld: [],
-      face: [],
-      leftHand: [],
-      rightHand: [],
-    };
-
-    // Face is always tracked. Pose for upper/full. Hands for full.
-    const faceRes = this.face.detectForVideo(video, ts);
-    out.face = toLandmarks(faceRes.faceLandmarks?.[0]);
-
-    if (mode === "upper" || mode === "full") {
-      const poseRes = this.pose.detectForVideo(video, ts);
-      out.pose = toLandmarks(poseRes.landmarks?.[0]);
-      out.poseWorld = toLandmarks(
-        poseRes.worldLandmarks?.[0] as NormalizedLandmark[] | undefined
-      );
-    }
-
-    if (mode === "full") {
-      const handRes = this.hand.detectForVideo(video, ts);
-      const hands = handRes.landmarks ?? [];
-      const handedness = handRes.handedness ?? [];
-      for (let i = 0; i < hands.length; i++) {
-        const label = handedness[i]?.[0]?.categoryName;
-        const lm = toLandmarks(hands[i]);
-        // MediaPipe labels hands from the subject's perspective.
-        if (label === "Left") out.leftHand = lm;
-        else if (label === "Right") out.rightHand = lm;
-      }
-    }
-
-    return out;
+  /** Register the per-frame result callback. */
+  onResult(cb: (r: DetectResult) => void) {
+    this.listener = cb;
   }
 
-  close() {
-    this.pose.close();
-    this.face.close();
-    this.hand.close();
+  private handle(results: Results) {
+    this.listener?.({
+      pose: toLandmarks(results.poseLandmarks),
+      poseWorld: toLandmarks(worldLandmarks(results)),
+      face: toLandmarks(results.faceLandmarks),
+      leftHand: toLandmarks(results.leftHandLandmarks),
+      rightHand: toLandmarks(results.rightHandLandmarks),
+    });
   }
+
+  /** Push one video frame; the result arrives via the `onResult` callback. */
+  async send(video: HTMLVideoElement) {
+    await this.holistic.send({ image: video });
+  }
+
+  async close() {
+    await this.holistic.close();
+  }
+}
+
+/** Filter a result by tracking mode (Holistic always computes everything). */
+export function filterByMode(r: DetectResult, mode: TrackingMode): DetectResult {
+  if (mode === "face") {
+    return { pose: [], poseWorld: [], face: r.face, leftHand: [], rightHand: [] };
+  }
+  return r; // upper + full both use pose + hands (legs gated later by visibility)
 }

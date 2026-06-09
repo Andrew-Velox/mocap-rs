@@ -8,8 +8,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [ ! -d node_modules/@mediapipe/tasks-vision ]; then
-  echo "error: run 'npm install' first (need @mediapipe/tasks-vision)." >&2
+if [ ! -d node_modules/@mediapipe/holistic ]; then
+  echo "error: run 'npm install' first (need @mediapipe/holistic)." >&2
   exit 1
 fi
 
@@ -18,23 +18,19 @@ dl() {
   curl -fL --retry 3 --max-time 120 "$1" -o "$2"
 }
 
-echo "[1/3] Copying MediaPipe WASM runtime…"
-mkdir -p public/mediapipe/wasm
-cp node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe/wasm/
+echo "[1/2] Copying MediaPipe Holistic runtime + models…"
+mkdir -p public/mediapipe/holistic
+cp node_modules/@mediapipe/holistic/holistic.js \
+   node_modules/@mediapipe/holistic/holistic_solution_* \
+   node_modules/@mediapipe/holistic/holistic.binarypb \
+   node_modules/@mediapipe/holistic/*.tflite \
+   public/mediapipe/holistic/
 
-echo "[2/3] Downloading MediaPipe models…"
-mkdir -p public/models/mediapipe
-BASE="https://storage.googleapis.com/mediapipe-models"
-dl "$BASE/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task" \
-   public/models/mediapipe/pose_landmarker_full.task
-dl "$BASE/face_landmarker/face_landmarker/float16/latest/face_landmarker.task" \
-   public/models/mediapipe/face_landmarker.task
-dl "$BASE/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task" \
-   public/models/mediapipe/hand_landmarker.task
-
-echo "[3/3] Downloading sample VRM avatar…"
+echo "[2/2] Downloading sample VRM avatars (clean VRoid rigs)…"
 mkdir -p public/models
-dl "https://raw.githubusercontent.com/pixiv/three-vrm/dev/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm" \
-   public/models/avatar.vrm
+VRM_BASE="https://raw.githubusercontent.com/madjin/vrm-samples/master"
+dl "$VRM_BASE/vroid/beta/Sendagaya_Shino.vrm" public/models/shino.vrm
+dl "$VRM_BASE/vroid/fem_vroid.vrm"            public/models/fem.vrm
+dl "$VRM_BASE/Avatar_Orion.vrm"              public/models/orion.vrm
 
 echo "Done. Assets are in public/. (Swap public/models/avatar.vrm for your own VRM if you like.)"
