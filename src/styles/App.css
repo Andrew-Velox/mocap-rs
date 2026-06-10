@@ -365,6 +365,23 @@ button {
   border-color: var(--accent);
 }
 
+/* ── Studio camera preview (corner) ──────────────────────────────────────── */
+.studio-cam {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  width: 11rem;
+  max-width: 32vw;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirror, like a selfie */
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: #000;
+  box-shadow: 0 12px 30px var(--shadow);
+  z-index: 4;
+}
+
 /* ── Phone capture ───────────────────────────────────────────────────────── */
 .phone {
   display: flex;

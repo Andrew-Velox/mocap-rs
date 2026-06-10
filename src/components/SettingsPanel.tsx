@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { TrackingMode } from "../lib/landmarks";
 import type { BackgroundMode } from "./AvatarCanvas";
+import { asset } from "../lib/assets";
 
 interface ModelEntry {
   name: string;
@@ -45,7 +46,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/models/index.json")
+    fetch(asset("models/index.json"))
       .then((r) => (r.ok ? r.json() : { models: [] }))
       .then((d: { models?: ModelEntry[] }) => {
         if (!cancelled && Array.isArray(d.models)) setModels(d.models);
@@ -72,11 +73,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <label className="field">
             <span>Avatar</span>
             <select value={props.modelUrl} onChange={(e) => props.onModelChange(e.target.value)}>
-              {!models.some((m) => `/models/${m.file}` === props.modelUrl) && (
+              {!models.some((m) => asset(`models/${m.file}`) === props.modelUrl) && (
                 <option value={props.modelUrl}>Current</option>
               )}
               {models.map((m) => (
-                <option key={m.file} value={`/models/${m.file}`}>
+                <option key={m.file} value={asset(`models/${m.file}`)}>
                   {m.name}
                 </option>
               ))}

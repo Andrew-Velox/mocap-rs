@@ -8,8 +8,9 @@ import { useWebSocket } from "../hooks/useWebSocket";
 import { useLandmarks } from "../hooks/useLandmarks";
 import { AvatarController } from "../lib/avatarController";
 import { isCalibrateMessage, type ModeMessage, type TrackingMode } from "../lib/landmarks";
+import { asset } from "../lib/assets";
 
-const DEFAULT_MODEL = "/models/shino.vrm";
+const DEFAULT_MODEL = asset("models/shino.vrm");
 
 // The desktop is a WebSocket *client* of the Rust relay (default port 8080).
 // In dev the SPA is served by Vite on another port, so target the relay host

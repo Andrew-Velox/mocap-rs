@@ -6,6 +6,8 @@ import react from "@vitejs/plugin-react";
 //   * Phone    → from the Rust relay over HTTPS (route "/phone")
 // so we build to ./dist, which the axum server serves as static files.
 export default defineConfig({
+  // "/" for the relay/local build; "/<repo>/" for GitHub Pages (set via env).
+  base: process.env.VITE_BASE || "/",
   plugins: [react()],
   build: {
     outDir: "dist",
