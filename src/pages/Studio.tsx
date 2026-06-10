@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, Camera, ScanFace, Hand, PersonStanding, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Play, Camera, PersonStanding, ShieldCheck, AlertTriangle } from "lucide-react";
 import type { VRM } from "@pixiv/three-vrm";
 import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
@@ -225,23 +225,16 @@ export function Studio() {
             >
               {phase === "idle" && (
                 <motion.div
-                  className="hero"
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 220, damping: 26 }}
+                  className="studio-prompt"
+                  initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 26 }}
                 >
-                  <div className="hero-badge">
-                    <ShieldCheck size={13} /> 100% on-device · nothing uploaded
-                  </div>
-                  <h1>
-                    Motion capture,
-                    <br />
-                    <span className="hero-accent">right in your browser.</span>
-                  </h1>
-                  <p>
-                    Drive a 3D VRM avatar with your webcam — face, hands and full
-                    body. No installs, no GPU, no cloud.
-                  </p>
+                  <span className="prompt-icon">
+                    <Camera size={24} />
+                  </span>
+                  <h2>Ready to capture</h2>
+                  <p>Allow camera access — everything runs locally, nothing is uploaded.</p>
                   <motion.button
                     className="start-btn"
                     onClick={start}
@@ -250,16 +243,8 @@ export function Studio() {
                   >
                     <Play size={18} /> Start capture
                   </motion.button>
-                  <div className="hero-chips">
-                    <span className="chip">
-                      <ScanFace size={13} /> Face & gaze
-                    </span>
-                    <span className="chip">
-                      <Hand size={13} /> Finger tracking
-                    </span>
-                    <span className="chip">
-                      <PersonStanding size={13} /> Full body
-                    </span>
+                  <div className="prompt-badge">
+                    <ShieldCheck size={12} /> on-device · offline · no GPU
                   </div>
                 </motion.div>
               )}

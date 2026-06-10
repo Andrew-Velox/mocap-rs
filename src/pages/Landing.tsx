@@ -140,21 +140,56 @@ export function Landing() {
       </section>
 
       <footer className="landing-footer">
-        <div className="footer-brand">
-          <span className="brand">
-            <span className="brand-mark">
-              <PersonStanding size={15} />
+        <div className="footer-top">
+          <div className="footer-brand">
+            <span className="brand">
+              <span className="brand-mark">
+                <PersonStanding size={15} />
+              </span>
+              mocap-rs
             </span>
-            mocap-rs
-          </span>
-          <p>Real-time, on-device motion capture for VRM avatars.</p>
+            <p>Real-time, on-device motion capture for VRM avatars — open source.</p>
+            <div className="footer-social">
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
+                <Code2 size={18} />
+              </a>
+            </div>
+          </div>
+
+          <div className="footer-cols">
+            <div className="footer-col">
+              <h4>Product</h4>
+              <Link to="/studio">Web Studio</Link>
+              <a href="#features">Features</a>
+            </div>
+            <div className="footer-col">
+              <h4>Resources</h4>
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+              <a href={`${GITHUB_URL}#readme`} target="_blank" rel="noreferrer">
+                Docs
+              </a>
+              <a href={`${GITHUB_URL}/issues`} target="_blank" rel="noreferrer">
+                Issues
+              </a>
+            </div>
+            <div className="footer-col">
+              <h4>Project</h4>
+              <a href={`${GITHUB_URL}/blob/main/LICENSE`} target="_blank" rel="noreferrer">
+                License
+              </a>
+              <a href={`${GITHUB_URL}/stargazers`} target="_blank" rel="noreferrer">
+                Star us
+              </a>
+            </div>
+          </div>
         </div>
-        <div className="footer-links">
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-            <Code2 size={18} />
-          </a>
+
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} mocap-rs</span>
+          <span>MIT License</span>
         </div>
-        <div className="footer-copy">© {new Date().getFullYear()} mocap-rs · MIT</div>
       </footer>
     </div>
   );
