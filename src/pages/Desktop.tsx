@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VRM } from "@pixiv/three-vrm";
-import { AvatarCanvas, type AvatarStatus } from "../components/AvatarCanvas";
+import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
-import { Controls } from "../components/Controls";
+import { SettingsPanel } from "../components/SettingsPanel";
 import { PairPanel } from "../components/PairPanel";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useLandmarks } from "../hooks/useLandmarks";
@@ -26,12 +26,28 @@ export function Desktop() {
   const [renderFps, setRenderFps] = useState(0);
   const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL);
   const [mode, setMode] = useState<TrackingMode>("full");
+  const [background, setBackground] = useState<BackgroundMode>("studio");
+  const [responsiveness, setResponsiveness] = useState(14);
+  const [upright, setUpright] = useState(true);
 
   const { solvedRef, ingest, tracking, inferenceFps } = useLandmarks();
 
   // Controller is (re)created whenever the VRM instance changes.
   const controllerRef = useRef<AvatarController | null>(null);
   const controlledVrm = useRef<VRM | null>(null);
+  // Mirror settings into refs so the (memoized) frame loop reads current values.
+  const respRef = useRef(responsiveness);
+  respRef.current = responsiveness;
+  const uprightRef = useRef(upright);
+  uprightRef.current = upright;
+
+  // Live-update the existing controller when settings change.
+  useEffect(() => {
+    if (controllerRef.current) controllerRef.current.smoothing = responsiveness;
+  }, [responsiveness]);
+  useEffect(() => {
+    if (controllerRef.current) controllerRef.current.uprightLock = upright;
+  }, [upright]);
 
   // Inbound messages: landmark frames → solve; calibrate → (re)capture neutral.
   const onMessage = useCallback(
@@ -58,12 +74,8 @@ export function Desktop() {
     [send]
   );
 
-  // Local calibrate controls (also usable when avatar + camera are same device).
   const calibrate = useCallback(() => controllerRef.current?.calibrate(), []);
-  const resetCalibration = useCallback(
-    () => controllerRef.current?.clearCalibration(),
-    []
-  );
+  const resetCalibration = useCallback(() => controllerRef.current?.clearCalibration(), []);
 
   // Render-FPS sampling (publish ~2x/sec).
   const frames = useRef(0);
@@ -75,7 +87,9 @@ export function Desktop() {
         if (vrm) {
           if (controlledVrm.current !== vrm) {
             controlledVrm.current = vrm;
-            controllerRef.current = new AvatarController(vrm);
+            const c = new AvatarController(vrm, respRef.current);
+            c.uprightLock = uprightRef.current;
+            controllerRef.current = c;
           }
           controllerRef.current!.apply(solvedRef.current, delta);
         }
@@ -97,24 +111,32 @@ export function Desktop() {
       <header className="topbar">
         <span className="brand">mocap-rs</span>
         <span className="subtitle">real-time avatar</span>
-        <Controls
-          modelUrl={modelUrl}
-          onModelChange={setModelUrl}
-          mode={mode}
-          onModeChange={handleModeChange}
-        />
-        <div className="calib-buttons">
-          <button className="btn" onClick={calibrate} title="Capture your current pose as neutral">
-            Calibrate
-          </button>
-          <button className="btn ghost" onClick={resetCalibration} title="Clear calibration">
-            Reset
-          </button>
+        <div className="topbar-right">
+          <SettingsPanel
+            modelUrl={modelUrl}
+            onModelChange={setModelUrl}
+            mode={mode}
+            onModeChange={handleModeChange}
+            background={background}
+            onBackgroundChange={setBackground}
+            responsiveness={responsiveness}
+            onResponsivenessChange={setResponsiveness}
+            upright={upright}
+            onUprightChange={setUpright}
+            onCalibrate={calibrate}
+            onReset={resetCalibration}
+          />
         </div>
       </header>
 
       <div className="stage">
-        <AvatarCanvas modelUrl={modelUrl} onStatus={setAvatar} onFrame={handleFrame} />
+        <AvatarCanvas
+          modelUrl={modelUrl}
+          background={background}
+          framing={mode}
+          onStatus={setAvatar}
+          onFrame={handleFrame}
+        />
         <PairPanel />
       </div>
 

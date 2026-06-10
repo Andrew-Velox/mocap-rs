@@ -54,11 +54,17 @@ export class AvatarController {
   // rotation axes are inverted. Negate them for VRM1 (matches SysMoCap).
   private readonly axisSign: number;
 
-  /** `smoothing` ~= responsiveness; higher snaps faster. */
+  // Keep the torso vertical (hips/spine use yaw only — no lean/tip).
+  uprightLock = true;
+
+  /** `smoothing` ~= responsiveness; higher snaps faster. Mutable at runtime. */
+  smoothing: number;
+
   constructor(
     private readonly vrm: VRM,
-    private readonly smoothing = 14
+    smoothing = 14
   ) {
+    this.smoothing = smoothing;
     this.axisSign = vrm.meta?.metaVersion === "1" ? -1 : 1;
     // We drive gaze manually each frame via applyYawPitch; disable auto lookAt
     // so vrm.update() doesn't overwrite it.
@@ -174,14 +180,27 @@ export class AvatarController {
 
   // ── pose ─────────────────────────────────────────────────────────────────
   private applyPose(pose: NonNullable<SolvedPose["pose"]>, t: number) {
-    if (pose.Hips.rotation) this.rigRotation("hips", pose.Hips.rotation, 0.7, t, true);
+    // Keep the avatar vertically upright: drive the hips by yaw (turn) only,
+    // zeroing pitch (lean fwd/back) and roll (tip side-to-side) so the body
+    // never tips off-vertical. `uprightLock` can be turned off for full lean.
+    if (pose.Hips.rotation) {
+      const hips = this.uprightLock
+        ? { x: 0, y: pose.Hips.rotation.y, z: 0 }
+        : pose.Hips.rotation;
+      this.rigRotation("hips", hips, 0.7, t, true);
+    }
     // Horizontal lean/step only; vertical placement is handled by foot grounding
     // (groundFeet) so the avatar stays planted instead of floating/bobbing with
     // the noisy world-space hip Y.
     this.rigHipPosition(pose.Hips.position, t * 0.4);
 
-    this.rigRotation("chest", pose.Spine, 0.25, t, true);
-    this.rigRotation("spine", pose.Spine, 0.45, t, true);
+    // Chest stays upright (kalidokit has no Chest; SysMoCap leaves it at rest).
+    // The spine gives a subtle bend — locked to yaw only when upright is on.
+    this.rigRotation("chest", { x: 0, y: 0, z: 0 }, 1, t, true);
+    const spine = this.uprightLock
+      ? { x: 0, y: (pose.Spine as { y?: number }).y ?? 0, z: 0 }
+      : pose.Spine;
+    this.rigRotation("spine", spine, 0.45, t, true);
 
     this.rigRotation("rightUpperArm", pose.RightUpperArm, 1, t, true);
     this.rigRotation("rightLowerArm", pose.RightLowerArm, 1, t, true);

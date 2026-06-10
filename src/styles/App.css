@@ -146,39 +146,89 @@ button {
   margin-left: 0.5rem;
 }
 
-/* ── Controls (avatar + tracking mode) ───────────────────────────────────── */
-.controls {
+/* ── Settings panel (gear popover) ───────────────────────────────────────── */
+.topbar-right {
   margin-left: auto;
   display: flex;
-  gap: 0.85rem;
-}
-.control {
-  display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.72rem;
+  gap: 0.5rem;
+}
+.settings {
+  position: relative;
+}
+.btn.icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.settings-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 17rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 40px var(--shadow);
+  z-index: 20;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--faint);
 }
-.control select {
+.field.row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.field select {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  padding: 0.35rem 0.6rem;
-  font-size: 0.8rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.82rem;
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
 }
-.control select:hover {
-  border-color: var(--accent);
-}
-.control select:focus {
+.field select:focus {
   outline: none;
   border-color: var(--accent);
+}
+.field input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.field input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.field-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.2rem;
+}
+.field-actions .btn {
+  flex: 1;
 }
 
 /* ── Pair panel (phone QR) ───────────────────────────────────────────────── */
