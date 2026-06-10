@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Play, Camera, ScanFace, Hand, PersonStanding, ShieldCheck, AlertTriangle } from "lucide-react";
 import type { VRM } from "@pixiv/three-vrm";
 import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
@@ -176,7 +178,12 @@ export function Studio() {
   return (
     <div className="desktop">
       <header className="topbar">
-        <span className="brand">mocap-rs</span>
+        <span className="brand">
+          <span className="brand-mark">
+            <PersonStanding size={15} />
+          </span>
+          mocap-rs
+        </span>
         <span className="subtitle">web studio</span>
         <div className="topbar-right">
           <SettingsPanel
@@ -208,28 +215,91 @@ export function Studio() {
         {/* Camera preview (corner). Always mounted so getUserMedia has a target. */}
         <video ref={videoRef} className="studio-cam" playsInline muted />
 
-        {phase !== "running" && (
-          <div className="phone-cover">
-            {phase === "idle" && (
-              <>
-                <h1>mocap-rs studio</h1>
-                <p>Runs entirely in your browser — nothing is uploaded. Tap start and allow the camera.</p>
-                <button className="start-btn" onClick={start}>
-                  Start
-                </button>
-              </>
-            )}
-            {phase === "starting" && <p className="loading">{statusMsg}</p>}
-            {phase === "error" && (
-              <>
-                <p className="err">⚠ {statusMsg}</p>
-                <button className="start-btn" onClick={start}>
-                  Retry
-                </button>
-              </>
-            )}
-          </div>
-        )}
+        <AnimatePresence>
+          {phase !== "running" && (
+            <motion.div
+              className="hero-cover"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.45 } }}
+            >
+              {phase === "idle" && (
+                <motion.div
+                  className="hero"
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 26 }}
+                >
+                  <div className="hero-badge">
+                    <ShieldCheck size={13} /> 100% on-device · nothing uploaded
+                  </div>
+                  <h1>
+                    Motion capture,
+                    <br />
+                    <span className="hero-accent">right in your browser.</span>
+                  </h1>
+                  <p>
+                    Drive a 3D VRM avatar with your webcam — face, hands and full
+                    body. No installs, no GPU, no cloud.
+                  </p>
+                  <motion.button
+                    className="start-btn"
+                    onClick={start}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    <Play size={18} /> Start capture
+                  </motion.button>
+                  <div className="hero-chips">
+                    <span className="chip">
+                      <ScanFace size={13} /> Face & gaze
+                    </span>
+                    <span className="chip">
+                      <Hand size={13} /> Finger tracking
+                    </span>
+                    <span className="chip">
+                      <PersonStanding size={13} /> Full body
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+              {phase === "starting" && (
+                <motion.div
+                  className="hero"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <motion.div
+                    className="loader-ring"
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  >
+                    <Camera size={20} />
+                  </motion.div>
+                  <p className="loading">{statusMsg}</p>
+                </motion.div>
+              )}
+              {phase === "error" && (
+                <motion.div
+                  className="hero"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <p className="err">
+                    <AlertTriangle size={16} /> {statusMsg}
+                  </p>
+                  <motion.button
+                    className="start-btn"
+                    onClick={start}
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    <Play size={18} /> Retry
+                  </motion.button>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <StatusBar

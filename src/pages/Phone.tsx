@@ -1,4 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Play,
+  Camera,
+  Wifi,
+  WifiOff,
+  Gauge,
+  Crosshair,
+  RotateCcw,
+  ShieldCheck,
+  AlertTriangle,
+} from "lucide-react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { Tracker, filterByMode, type DetectResult } from "../lib/tracker";
 import {
@@ -203,36 +215,88 @@ export function Phone() {
       <div className="video-wrap">
         <video ref={videoRef} className="cam" playsInline muted />
         <canvas ref={canvasRef} className="overlay" />
-        {countdown !== null && <div className="countdown">{countdown}</div>}
-        {phase !== "running" && (
-          <div className="phone-cover">
-            {phase === "idle" && (
-              <>
-                <h1>mocap-rs</h1>
-                <p>Point the camera at yourself and tap start.</p>
-                <button className="start-btn" onClick={start}>
-                  Start capture
-                </button>
-              </>
-            )}
-            {phase === "starting" && <p className="loading">{statusMsg}</p>}
-            {phase === "error" && (
-              <>
-                <p className="err">⚠ {statusMsg}</p>
-                <button className="start-btn" onClick={start}>
-                  Retry
-                </button>
-              </>
-            )}
-          </div>
-        )}
+        <AnimatePresence>
+          {countdown !== null && (
+            <motion.div
+              key={countdown}
+              className="countdown"
+              initial={{ scale: 1.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.6, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 420, damping: 24 }}
+            >
+              {countdown}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {phase !== "running" && (
+            <motion.div
+              className="hero-cover"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.4 } }}
+            >
+              {phase === "idle" && (
+                <motion.div
+                  className="hero"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 26 }}
+                >
+                  <div className="hero-badge">
+                    <ShieldCheck size={13} /> on-device tracking
+                  </div>
+                  <h1>
+                    Your phone is
+                    <br />
+                    <span className="hero-accent">the mocap camera.</span>
+                  </h1>
+                  <p>Point it at yourself, tap start, and watch the avatar follow.</p>
+                  <motion.button
+                    className="start-btn"
+                    onClick={start}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Play size={18} /> Start capture
+                  </motion.button>
+                </motion.div>
+              )}
+              {phase === "starting" && (
+                <motion.div className="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <motion.div
+                    className="loader-ring"
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  >
+                    <Camera size={20} />
+                  </motion.div>
+                  <p className="loading">{statusMsg}</p>
+                </motion.div>
+              )}
+              {phase === "error" && (
+                <motion.div className="hero" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+                  <p className="err">
+                    <AlertTriangle size={16} /> {statusMsg}
+                  </p>
+                  <motion.button className="start-btn" onClick={start} whileTap={{ scale: 0.95 }}>
+                    <Play size={18} /> Retry
+                  </motion.button>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="phone-hud">
         <span className={`pill ${connected ? "on" : "off"}`}>
-          {connected ? "● linked" : "○ connecting"}
+          {connected ? <Wifi size={13} /> : <WifiOff size={13} />}
+          {connected ? "linked" : "connecting"}
         </span>
-        <span className="pill">{fps} fps</span>
+        <span className="pill">
+          <Gauge size={13} /> {fps} fps
+        </span>
         <span className="pill">{mode}</span>
         <span className="pill">
           {[
@@ -246,10 +310,10 @@ export function Phone() {
         {phase === "running" && (
           <>
             <button className="pill btn" onClick={calibrate}>
-              Calibrate
+              <Crosshair size={13} /> Calibrate
             </button>
             <button className="pill btn" onClick={resetCalibration}>
-              Reset
+              <RotateCcw size={13} /> Reset
             </button>
           </>
         )}

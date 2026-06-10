@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PersonStanding } from "lucide-react";
 import type { VRM } from "@pixiv/three-vrm";
 import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
@@ -110,7 +111,12 @@ export function Desktop() {
   return (
     <div className="desktop">
       <header className="topbar">
-        <span className="brand">mocap-rs</span>
+        <span className="brand">
+          <span className="brand-mark">
+            <PersonStanding size={15} />
+          </span>
+          mocap-rs
+        </span>
         <span className="subtitle">real-time avatar</span>
         <div className="topbar-right">
           <SettingsPanel
