@@ -34,7 +34,11 @@ tauri-app = ["dep:tauri", "dep:tauri-build"]
 [dependencies]
 tauri = { version = "2", optional = true }
 axum = { version = "0.7", features = ["ws"] }
-axum-server = { version = "0.7", features = ["tls-rustls"] }
+# Use rustls with the `ring` crypto provider (pure-Rust-ish, builds on Android/
+# Termux + musl) instead of the default aws-lc-rs, which needs a C toolchain
+# (cmake/clang) and fails to cross/Termux-build.
+axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.5", features = ["cors", "fs", "trace", "set-header"] }
 tower = "0.5"
@@ -51,6 +55,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Only pulled in for the `tauri-app` feature (needs webkit2gtk-4.1 on Linux).
 [build-dependencies]
 tauri-build = { version = "2", optional = true }
+
+# Drop debug info in dev builds. Full debuginfo makes the linker allocate a lot
+# of memory, which segfaults `cc`/lld on low-RAM devices (e.g. Termux/Android).
+# This is a relay server, not something we step through in a debugger.
+[profile.dev]
+debug = 0
 
 [profile.release]
 opt-level = "z"     # keep the binary small

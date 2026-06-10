@@ -77,6 +77,10 @@ pub fn router(state: AppState) -> Router {
 /// Boot the TLS relay on `0.0.0.0:port`. HTTPS/WSS is mandatory because mobile
 /// browsers only expose `getUserMedia` in a secure context.
 pub async fn run(port: u16, static_dir: PathBuf) -> std::io::Result<()> {
+    // We build rustls with the `ring` provider only (no aws-lc-rs), so install
+    // it as the process default before any TLS config is created.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     let state = AppState {
         sessions: Sessions::new(),
         static_dir,
