@@ -12,11 +12,12 @@ import {
 } from "lucide-react";
 import type { TrackingMode } from "../lib/landmarks";
 import type { BackgroundMode } from "./AvatarCanvas";
-import { asset } from "../lib/assets";
+import { asset, modelUrl } from "../lib/assets";
 
 interface ModelEntry {
   name: string;
   file: string;
+  cdn?: string;
 }
 
 export interface SettingsPanelProps {
@@ -105,11 +106,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 <User size={13} /> Avatar
               </span>
               <select value={props.modelUrl} onChange={(e) => props.onModelChange(e.target.value)}>
-                {!models.some((m) => asset(`models/${m.file}`) === props.modelUrl) && (
+                {!models.some((m) => modelUrl(m) === props.modelUrl) && (
                   <option value={props.modelUrl}>Current</option>
                 )}
                 {models.map((m) => (
-                  <option key={m.file} value={asset(`models/${m.file}`)}>
+                  <option key={m.file} value={modelUrl(m)}>
                     {m.name}
                   </option>
                 ))}

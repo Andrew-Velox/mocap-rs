@@ -1,7 +1,19 @@
 {
   "models": [
-    { "name": "Shino", "file": "shino.vrm" },
-    { "name": "VRoid F", "file": "fem.vrm" },
-    { "name": "Orion", "file": "orion.vrm" }
+    {
+      "name": "Shino",
+      "file": "shino.vrm",
+      "cdn": "https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/vroid/beta/Sendagaya_Shino.vrm"
+    },
+    {
+      "name": "VRoid F",
+      "file": "fem.vrm",
+      "cdn": "https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/vroid/fem_vroid.vrm"
+    },
+    {
+      "name": "Orion",
+      "file": "orion.vrm",
+      "cdn": "https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/Avatar_Orion.vrm"
+    }
   ]
 }

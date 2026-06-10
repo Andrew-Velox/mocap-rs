@@ -9,10 +9,13 @@ import { SettingsPanel } from "../components/SettingsPanel";
 import { useLandmarks } from "../hooks/useLandmarks";
 import { AvatarController } from "../lib/avatarController";
 import { Tracker, filterByMode, type DetectResult } from "../lib/tracker";
-import { asset } from "../lib/assets";
+import { modelUrl } from "../lib/assets";
 import type { LandmarkFrame, TrackingMode } from "../lib/landmarks";
 
-const DEFAULT_MODEL = asset("models/shino.vrm");
+const DEFAULT_MODEL = modelUrl({
+  file: "shino.vrm",
+  cdn: "https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/vroid/beta/Sendagaya_Shino.vrm",
+});
 
 type Phase = "idle" | "starting" | "running" | "error";
 
@@ -28,15 +31,13 @@ export function Studio() {
   const rvfcRef = useRef(0);
 
   const [params] = useSearchParams();
-  const selected = params.get("avatar");
+  const selected = params.get("m");
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [statusMsg, setStatusMsg] = useState("");
   const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading", progress: 0 });
   const [renderFps, setRenderFps] = useState(0);
-  const [modelUrl, setModelUrl] = useState(
-    selected ? asset(`models/${selected}`) : DEFAULT_MODEL
-  );
+  const [modelUrl, setModelUrl] = useState(selected || DEFAULT_MODEL);
   const [mode, setMode] = useState<TrackingMode>("full");
   const [background, setBackground] = useState<BackgroundMode>("studio");
   const [responsiveness, setResponsiveness] = useState(14);

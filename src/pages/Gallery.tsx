@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PersonStanding, ArrowLeft, Play } from "lucide-react";
-import { asset } from "../lib/assets";
+import { asset, modelUrl } from "../lib/assets";
 
 interface ModelEntry {
   name: string;
   file: string;
+  cdn?: string;
   thumb?: string;
 }
 
@@ -60,7 +61,7 @@ export function Gallery() {
             >
               <Link
                 className="avatar-card"
-                to={`/studio/live?avatar=${encodeURIComponent(m.file)}`}
+                to={`/studio/live?m=${encodeURIComponent(modelUrl(m))}`}
               >
                 <div className="avatar-thumb">
                   {m.thumb ? (

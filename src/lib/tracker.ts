@@ -11,9 +11,9 @@
 // (its CDN usage), so an ESM import would be undefined at runtime.
 import type { Holistic, Results, NormalizedLandmark, Options } from "@mediapipe/holistic";
 import type { Landmark, TrackingMode } from "./landmarks";
-import { asset } from "./assets";
+import { MEDIAPIPE_BASE } from "./assets";
 
-const ASSET_PATH = asset("mediapipe/holistic");
+const ASSET_PATH = MEDIAPIPE_BASE;
 
 type HolisticCtor = new (config: { locateFile: (f: string) => string }) => Holistic;
 
