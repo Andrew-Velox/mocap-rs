@@ -65,7 +65,7 @@ export function Gallery() {
               >
                 <div className="avatar-thumb">
                   {m.thumb ? (
-                    <img src={asset(`models/${m.thumb}`)} alt={m.name} loading="lazy" />
+                    <img src={asset(`avatars/${m.thumb}`)} alt={m.name} loading="lazy" />
                   ) : (
                     <PersonStanding size={42} />
                   )}
