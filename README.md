@@ -1,114 +1,77 @@
 # mocap-rs
 
-Real-time motion capture + VRM avatar animation. Your **phone** runs MediaPipe
-(pose / face / hands) locally on its GPU and streams 3D landmarks over WebSocket
-to a small **Rust relay**; your **desktop** receives them and animates a VRM
-avatar with kalidokit + three-vrm. Fully offline — no cloud, no desktop GPU
-required.
+Real-time, browser-based motion capture for **VRM avatars**. Your webcam drives a
+3D avatar's face, hands, and full body — running entirely on-device, offline, and
+**without a GPU**.
 
-```
-Phone browser ──(WSS landmarks)──▶ Rust relay (axum) ──(WSS)──▶ Desktop (Tauri/Three.js)
-  getUserMedia                       port 8080,                   kalidokit → VRM bones
-  MediaPipe WASM                     relay + static files         three-vrm render
-```
+> **Live demo:** open the deployed site, click **Start**, allow the camera.
 
-The Rust server is **only** a relay + static file server. MediaPipe runs
-**only** in the phone browser — never on the desktop.
+Built with MediaPipe Holistic + Kalidokit + three-vrm, with an optional Rust
+relay for phone-camera → desktop streaming.
 
-## Requirements
+## Features
 
-- Rust (stable), Node 18+
-- For the desktop **Tauri** app on Linux: `webkit2gtk-4.1` and the usual Tauri
-  build deps. On Arch:
-  ```bash
-  sudo pacman -S webkit2gtk-4.1 base-devel curl wget file openssl \
-                 gtk3 libappindicator-gtk3 librsvg
-  ```
+- 🎭 **Full-body tracking** — pose, hands (per-finger), face, eye gaze, blink
+- 🧍 **Upright lock**, **foot grounding**, and **neutral-pose calibration**
+- 🎥 **Backgrounds** — studio / green-screen / transparent (OBS-ready)
+- 🎚️ Live **responsiveness**, **avatar switcher**, and face/upper/full framing
+- 🌐 Two ways to run: **standalone web app** or **phone → desktop** over the LAN
+- ⚡ CPU-friendly (no discrete GPU needed); works offline
 
-## Project layout
-
-```
-src-tauri/          Rust: relay server (+ optional Tauri shell)
-  src/server.rs       axum HTTP + WebSocket relay, TLS
-  src/session.rs      connected-client registry / broadcast
-  src/tls.rs          rcgen self-signed cert
-  src/net.rs          LAN IP + QR (terminal & SVG)
-  src/main.rs         headless relay runner (default build)
-  src/app.rs          Tauri desktop entry (feature "tauri-app")
-src/                Frontend (React + Vite)
-  pages/Desktop.tsx   avatar canvas + controls + status
-  pages/Phone.tsx     camera + MediaPipe + WS sender
-  components/         AvatarCanvas, StatusBar, Controls, PairPanel
-  hooks/              useWebSocket, useLandmarks
-  lib/                tracker (MediaPipe), poseSolver, avatarController, landmarks
-public/
-  models/avatar.vrm           the avatar (swap in your own)
-  models/mediapipe/*.task      MediaPipe models (offline)
-  mediapipe/wasm/*             MediaPipe runtime (offline)
-```
-
-## Run
-
-Everything is served over **HTTPS/WSS** with a self-signed cert (mobile camera
-access requires a secure context). The first time, accept the certificate
-warning on both phone and desktop.
-
-### Quick start (browser-first, no webkit needed)
+## Quick start (standalone web app)
 
 ```bash
 npm install
-npm run fetch-assets                # download VRM + MediaPipe models/WASM (not in git)
-npm run build                       # build the SPA into dist/
-
-# Terminal 1 — the relay (prints the phone URL + a QR code):
-cargo run --manifest-path src-tauri/Cargo.toml
-
-# Desktop: open https://localhost:8080/  in a browser
-# Phone:   scan the QR / open https://<LAN-IP>:8080/phone, tap "Start capture"
+npm run fetch-assets   # downloads MediaPipe models + sample VRMs
+npm run dev            # open the printed URL, go to /studio
 ```
 
-For frontend hot-reload during development, run `npm run dev` (Vite on :5173)
-alongside the relay; the desktop page connects to the relay on :8080.
+Everything runs in one browser tab — camera, tracking, and avatar. Nothing is
+uploaded.
 
-### Desktop app (Tauri)
+## Phone → desktop (LAN relay)
 
-Once `webkit2gtk-4.1` is installed:
+Use your phone as the camera and watch the avatar on another screen. Served over
+HTTPS (required for camera access) with a self-signed cert.
 
 ```bash
-npm run tauri dev          # dev window with hot reload
-npm run tauri build        # production bundle
+npm install && npm run fetch-assets && npm run build
+cargo run --manifest-path src-tauri/Cargo.toml   # prints a LAN URL + QR code
 ```
 
-This compiles the relay with `--features tauri-app` and spawns it from the app's
-setup hook, then opens the desktop webview.
+- **Capture device:** open `https://<lan-ip>:8080/phone` (scan the QR), tap Start
+- **Viewer:** open `https://<lan-ip>:8080/` to see the avatar
 
-## How it works
+The Rust server is just a TLS WebSocket relay + static file host — it never
+inspects your video. It also builds on Termux/Android (uses `ring` for TLS).
 
-- **Phone** (`Phone.tsx` + `lib/tracker.ts`): `getUserMedia` → MediaPipe
-  PoseLandmarker / FaceLandmarker / HandLandmarker (VIDEO mode, GPU) → builds a
-  landmark frame each video frame → sends JSON over WSS. Overlay + FPS shown.
-- **Relay** (`server.rs`): receives frames, broadcasts to all *other* clients.
-  Also serves the SPA, MediaPipe assets, `/api/info`, and `/qr.svg`.
-- **Desktop** (`Desktop.tsx`): `useWebSocket` → `useLandmarks` (kalidokit
-  `solvePose`) → `AvatarController` applies bone rotations to the VRM with
-  frame-rate-independent smoothing. Tracking mode (face / upper / full) is sent
-  back to the phone so it only runs the landmarkers it needs.
+## Deploy (static hosting)
 
-### Landmark message format
+The standalone app is a static site — deploy to Vercel, Netlify, Cloudflare
+Pages, or GitHub Pages (free, HTTPS included).
 
-```json
-{
-  "type": "landmarks", "timestamp": 0,
-  "pose":  [{ "x": 0, "y": 0, "z": 0, "visibility": 0.9 }],
-  "poseWorld": [{ "x": 0, "y": 0, "z": 0 }],
-  "face":  [{ "x": 0, "y": 0, "z": 0 }],
-  "leftHand":  [{ "x": 0, "y": 0, "z": 0 }],
-  "rightHand": [{ "x": 0, "y": 0, "z": 0 }]
-}
+```bash
+npm run build          # outputs dist/
 ```
 
-## Swapping the avatar
+For GitHub Pages (served from a sub-path), build with
+`VITE_BASE=/<repo>/ VITE_STANDALONE=1` — a workflow is included in
+`.github/workflows/deploy.yml`.
+
+## Custom avatars
 
 Drop any `.vrm` into `public/models/` and add it to `public/models/index.json`;
-it appears in the desktop's Avatar dropdown.
-```
+it appears in the in-app avatar switcher.
+
+## Stack
+
+| Layer    | Tech |
+|----------|------|
+| Tracking | MediaPipe Holistic, Kalidokit |
+| Render   | Three.js, @pixiv/three-vrm |
+| Frontend | React, Vite, TypeScript |
+| Relay    | Rust — axum, tokio, rustls (ring), rcgen |
+
+## License
+
+MIT
