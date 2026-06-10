@@ -90,6 +90,9 @@ export class AvatarController {
       this.applyHand("Right", solved.rightHand, t, solved.pose?.RightHand?.z ?? 0);
     }
 
+    // Keep the avatar's feet on the floor (after all rotations are applied).
+    if (solved.pose) this.groundFeet(t);
+
     // One full pass captured the neutral; switch to applying it from now on.
     if (this.calibState === "capture") this.calibState = "active";
   }
@@ -138,26 +141,44 @@ export class AvatarController {
     node.quaternion.slerp(this.quat, t);
   }
 
-  private rigPosition(name: string, pos: XYZ, dampener: number, t: number) {
-    const node = this.bone(name);
+  /** Hip horizontal translation only — keeps the bone's rest vertical height. */
+  private rigHipPosition(pos: XYZ, t: number) {
+    const node = this.bone("hips");
     if (!node) return;
-    this.vec.set((pos.x ?? 0) * dampener, (pos.y ?? 0) * dampener, (pos.z ?? 0) * dampener);
+    this.vec.set(pos.x ?? 0, node.position.y, -(pos.z ?? 0));
     node.position.lerp(this.vec, t);
+  }
+
+  /**
+   * Foot grounding: shift the whole avatar vertically so the lowest foot rests
+   * on the floor (y=0). Keeps the character planted as legs bend / lean, and
+   * removes the vertical float that comes from world-space hip height. Called
+   * after all bone rotations so foot world positions are current.
+   */
+  private groundFeet(t: number) {
+    const lf = this.bone("leftFoot") ?? this.bone("leftToes");
+    const rf = this.bone("rightFoot") ?? this.bone("rightToes");
+    let minY = Infinity;
+    if (lf) {
+      lf.getWorldPosition(this.vec);
+      minY = Math.min(minY, this.vec.y);
+    }
+    if (rf) {
+      rf.getWorldPosition(this.vec);
+      minY = Math.min(minY, this.vec.y);
+    }
+    if (!Number.isFinite(minY)) return;
+    const target = this.vrm.scene.position.y - minY; // bring lowest foot to 0
+    this.vrm.scene.position.y = THREE.MathUtils.lerp(this.vrm.scene.position.y, target, t * 0.5);
   }
 
   // ── pose ─────────────────────────────────────────────────────────────────
   private applyPose(pose: NonNullable<SolvedPose["pose"]>, t: number) {
     if (pose.Hips.rotation) this.rigRotation("hips", pose.Hips.rotation, 0.7, t, true);
-    this.rigPosition(
-      "hips",
-      {
-        x: pose.Hips.position.x,
-        y: pose.Hips.position.y + 1, // lift to standing height
-        z: -pose.Hips.position.z, // reverse depth (matches SysMoCap)
-      },
-      1,
-      t * 0.5
-    );
+    // Horizontal lean/step only; vertical placement is handled by foot grounding
+    // (groundFeet) so the avatar stays planted instead of floating/bobbing with
+    // the noisy world-space hip Y.
+    this.rigHipPosition(pose.Hips.position, t * 0.4);
 
     this.rigRotation("chest", pose.Spine, 0.25, t, true);
     this.rigRotation("spine", pose.Spine, 0.45, t, true);
