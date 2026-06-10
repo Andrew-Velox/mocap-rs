@@ -327,7 +327,7 @@ function drawOverlay(
   const C = mpConns();
 
   // Face mesh + iris.
-  drawConnectors(ctx, r.face, C.FACEMESH_TESSELATION, w, h, "rgba(200,200,200,0.22)", 0.5);
+  drawConnectors(ctx, r.face, C.FACEMESH_TESSELATION, w, h, "#46506a", 0.5);
   if (r.face.length >= 478) {
     drawDots(ctx, [r.face[468], r.face[473]], w, h, "#ffe603", 2);
   }

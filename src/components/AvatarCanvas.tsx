@@ -71,10 +71,8 @@ export function AvatarCanvas({ modelUrl, onStatus, onFrame }: AvatarCanvasProps)
     rim.position.set(-2, 1, -1.5);
     scene.add(rim);
 
-    // Ground grid for spatial reference.
-    const grid = new THREE.GridHelper(10, 20, 0x223044, 0x16202c);
-    (grid.material as THREE.Material).transparent = true;
-    (grid.material as THREE.Material).opacity = 0.4;
+    // Ground grid for spatial reference (solid colors, no transparency).
+    const grid = new THREE.GridHelper(10, 20, 0x1a2030, 0x12161f);
     scene.add(grid);
 
     let currentVrm: VRM | null = null;
