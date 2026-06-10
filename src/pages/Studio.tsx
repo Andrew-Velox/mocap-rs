@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, Camera, PersonStanding, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Play, PersonStanding, AlertTriangle } from "lucide-react";
 import type { VRM } from "@pixiv/three-vrm";
 import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
 import { SettingsPanel } from "../components/SettingsPanel";
-import { AvatarLoader } from "../components/AvatarLoader";
 import { useLandmarks } from "../hooks/useLandmarks";
 import { AvatarController } from "../lib/avatarController";
 import { Tracker, filterByMode, type DetectResult } from "../lib/tracker";
@@ -149,6 +148,16 @@ export function Studio() {
     }
   }, [onResult, pump]);
 
+  // Auto-start on entry — "Launch Studio" navigates here within the same SPA
+  // document, so the click's user-activation still covers getUserMedia. If the
+  // browser blocks it, the error state offers a Retry (a fresh gesture).
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current) return;
+    autoStarted.current = true;
+    start();
+  }, [start]);
+
   // ── Avatar drive + render FPS ─────────────────────────────────────────────
   const frames = useRef(0);
   const lastSample = useRef(performance.now());
@@ -224,49 +233,7 @@ export function Studio() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.45 } }}
             >
-              {avatar.kind === "loading" && <AvatarLoader progress={avatar.progress} />}
-              {phase === "idle" && avatar.kind !== "loading" && (
-                <motion.div
-                  className="studio-prompt"
-                  initial={{ opacity: 0, scale: 0.96, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 280, damping: 26 }}
-                >
-                  <span className="prompt-icon">
-                    <Camera size={24} />
-                  </span>
-                  <h2>Ready to capture</h2>
-                  <p>Allow camera access — everything runs locally, nothing is uploaded.</p>
-                  <motion.button
-                    className="start-btn"
-                    onClick={start}
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                  >
-                    <Play size={18} /> Start capture
-                  </motion.button>
-                  <div className="prompt-badge">
-                    <ShieldCheck size={12} /> on-device · offline · no GPU
-                  </div>
-                </motion.div>
-              )}
-              {phase === "starting" && (
-                <motion.div
-                  className="hero"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  <motion.div
-                    className="loader-ring"
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                  >
-                    <Camera size={20} />
-                  </motion.div>
-                  <p className="loading">{statusMsg}</p>
-                </motion.div>
-              )}
-              {phase === "error" && (
+              {phase === "error" ? (
                 <motion.div
                   className="hero"
                   initial={{ opacity: 0, y: 12 }}
@@ -275,13 +242,16 @@ export function Studio() {
                   <p className="err">
                     <AlertTriangle size={16} /> {statusMsg}
                   </p>
-                  <motion.button
-                    className="start-btn"
-                    onClick={start}
-                    whileTap={{ scale: 0.96 }}
-                  >
+                  <motion.button className="start-btn" onClick={start} whileTap={{ scale: 0.96 }}>
                     <Play size={18} /> Retry
                   </motion.button>
+                </motion.div>
+              ) : (
+                <motion.div className="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="loader-ring" />
+                  <p className="loading">
+                    {avatar.kind === "loading" ? "loading avatar" : statusMsg || "starting"}
+                  </p>
                 </motion.div>
               )}
             </motion.div>

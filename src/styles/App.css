@@ -72,9 +72,6 @@ svg {
     transform: rotate(360deg);
   }
 }
-.route-loading .loader-ring {
-  animation: spin 0.9s linear infinite;
-}
 
 /* ── Landing (marketing) ─────────────────────────────────────────────────── */
 .landing {
@@ -483,102 +480,12 @@ svg {
 }
 
 .loader-ring {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.4rem;
-  height: 3.4rem;
+  width: 3.2rem;
+  height: 3.2rem;
   border-radius: 50%;
-  border: 2px solid var(--border-strong);
+  border: 3px solid var(--surface-3);
   border-top-color: var(--accent);
-  color: var(--accent);
-}
-
-/* Centered avatar download loader */
-.avatar-loader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  text-align: center;
-}
-.avatar-loader-pct {
-  font-size: clamp(3.5rem, 12vw, 6rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-.avatar-loader-pct span {
-  font-size: 0.4em;
-  font-weight: 700;
-  color: var(--accent);
-  margin-left: 0.1em;
-}
-.avatar-loader-bar {
-  width: min(20rem, 60vw);
-  height: 6px;
-  border-radius: 999px;
-  background: var(--surface-3);
-  overflow: hidden;
-}
-.avatar-loader-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent);
-}
-.avatar-loader-label {
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-
-/* Studio entry prompt (compact — not a second homepage) */
-.studio-prompt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.85rem;
-  text-align: center;
-  padding: 2.2rem;
-  max-width: 24rem;
-}
-.prompt-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.6rem;
-  height: 3.6rem;
-  border-radius: 16px;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.studio-prompt h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-.studio-prompt p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.55;
-  max-width: 20rem;
-}
-.prompt-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.2rem;
-  color: var(--faint);
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-.prompt-badge svg {
-  color: var(--good);
+  animation: spin 0.9s linear infinite;
 }
 .hero .loading {
   color: var(--muted);

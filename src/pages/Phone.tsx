@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Play,
-  Camera,
   Wifi,
   WifiOff,
   Gauge,
@@ -264,13 +263,7 @@ export function Phone() {
               )}
               {phase === "starting" && (
                 <motion.div className="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <motion.div
-                    className="loader-ring"
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                  >
-                    <Camera size={20} />
-                  </motion.div>
+                  <div className="loader-ring" />
                   <p className="loading">{statusMsg}</p>
                 </motion.div>
               )}

@@ -4,7 +4,6 @@ import type { VRM } from "@pixiv/three-vrm";
 import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
 import { SettingsPanel } from "../components/SettingsPanel";
-import { AvatarLoader } from "../components/AvatarLoader";
 import { PairPanel } from "../components/PairPanel";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useLandmarks } from "../hooks/useLandmarks";
@@ -147,7 +146,10 @@ export function Desktop() {
         />
         {avatar.kind === "loading" && (
           <div className="hero-cover">
-            <AvatarLoader progress={avatar.progress} />
+            <div className="hero">
+              <div className="loader-ring" />
+              <p className="loading">loading avatar</p>
+            </div>
           </div>
         )}
         <PairPanel />
