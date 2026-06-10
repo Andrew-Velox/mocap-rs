@@ -2,8 +2,10 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Landing } from "./pages/Landing";
 
-// Heavy routes (three.js, VRM, kalidokit) are code-split so the landing page
-// stays light and loads instantly — the 3D bundle is only fetched on navigation.
+// Gallery is light (no three.js); Studio/Desktop/Phone are heavy (three.js, VRM,
+// kalidokit) and code-split so the 3D bundle only loads after the user picks an
+// avatar / enters a capture page.
+const Gallery = lazy(() => import("./pages/Gallery").then((m) => ({ default: m.Gallery })));
 const Studio = lazy(() => import("./pages/Studio").then((m) => ({ default: m.Studio })));
 const Desktop = lazy(() => import("./pages/Desktop").then((m) => ({ default: m.Desktop })));
 const Phone = lazy(() => import("./pages/Phone").then((m) => ({ default: m.Phone })));
@@ -26,7 +28,8 @@ export function App() {
       <Suspense fallback={<RouteLoading />}>
         <Routes>
           <Route path="/" element={standalone ? <Landing /> : <Desktop />} />
-          <Route path="/studio" element={<Studio />} />
+          <Route path="/studio" element={<Gallery />} />
+          <Route path="/studio/live" element={<Studio />} />
           <Route path="/desktop" element={<Desktop />} />
           <Route path="/phone" element={<Phone />} />
         </Routes>

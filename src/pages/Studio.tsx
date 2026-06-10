@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, PersonStanding, AlertTriangle } from "lucide-react";
 import type { VRM } from "@pixiv/three-vrm";
@@ -26,11 +27,16 @@ export function Studio() {
   const rafRef = useRef(0);
   const rvfcRef = useRef(0);
 
+  const [params] = useSearchParams();
+  const selected = params.get("avatar");
+
   const [phase, setPhase] = useState<Phase>("idle");
   const [statusMsg, setStatusMsg] = useState("");
   const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading", progress: 0 });
   const [renderFps, setRenderFps] = useState(0);
-  const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL);
+  const [modelUrl, setModelUrl] = useState(
+    selected ? asset(`models/${selected}`) : DEFAULT_MODEL
+  );
   const [mode, setMode] = useState<TrackingMode>("full");
   const [background, setBackground] = useState<BackgroundMode>("studio");
   const [responsiveness, setResponsiveness] = useState(14);
