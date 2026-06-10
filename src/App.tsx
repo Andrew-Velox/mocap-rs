@@ -1,28 +1,36 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Desktop } from "./pages/Desktop";
-import { Phone } from "./pages/Phone";
-import { Studio } from "./pages/Studio";
+import { Landing } from "./pages/Landing";
 
-// In a standalone deploy (e.g. GitHub Pages, no relay) the home route is the
-// all-in-one Studio. The relay build keeps "/" as the avatar viewer.
+// Heavy routes (three.js, VRM, kalidokit) are code-split so the landing page
+// stays light and loads instantly — the 3D bundle is only fetched on navigation.
+const Studio = lazy(() => import("./pages/Studio").then((m) => ({ default: m.Studio })));
+const Desktop = lazy(() => import("./pages/Desktop").then((m) => ({ default: m.Desktop })));
+const Phone = lazy(() => import("./pages/Phone").then((m) => ({ default: m.Phone })));
+
+// Standalone (web) build: home is the marketing landing. Relay build: home is
+// the avatar viewer.
 const standalone = import.meta.env.VITE_STANDALONE === "1";
 
-/**
- * Routes:
- *   /        → Studio (standalone build) or Desktop avatar viewer (relay build)
- *   /studio  → Studio: camera + MediaPipe + avatar in one tab (no relay)
- *   /desktop → Desktop avatar viewer (relay)
- *   /phone   → Phone capture (relay)
- */
+function RouteLoading() {
+  return (
+    <div className="route-loading">
+      <div className="loader-ring" />
+    </div>
+  );
+}
+
 export function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Routes>
-        <Route path="/" element={standalone ? <Studio /> : <Desktop />} />
-        <Route path="/studio" element={<Studio />} />
-        <Route path="/desktop" element={<Desktop />} />
-        <Route path="/phone" element={<Phone />} />
-      </Routes>
+      <Suspense fallback={<RouteLoading />}>
+        <Routes>
+          <Route path="/" element={standalone ? <Landing /> : <Desktop />} />
+          <Route path="/studio" element={<Studio />} />
+          <Route path="/desktop" element={<Desktop />} />
+          <Route path="/phone" element={<Phone />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
