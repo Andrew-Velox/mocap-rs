@@ -14,6 +14,23 @@ type Side = "Left" | "Right";
 // Max eye-gaze deflection (degrees) mapped from the normalized iris position.
 const GAZE_DEG = 22;
 
+// Expressions (blink/mouth/gaze) get their own snappy smoothing so they stay
+// crisp regardless of the body responsiveness setting.
+const FACE_SMOOTHING = 22;
+
+// Blink remap: kalidokit eye "openness" rarely hits a clean 0/1 (resting ~0.8,
+// closed ~0.2). Map openness ≥ OPEN → fully open (0 blink) and ≤ CLOSED → fully
+// closed (1 blink), so eyes don't look sleepy and blinks actually close.
+const BLINK_OPEN = 0.75;
+const BLINK_CLOSED = 0.3;
+function blink(openness: number): number {
+  return THREE.MathUtils.clamp(
+    (BLINK_OPEN - openness) / (BLINK_OPEN - BLINK_CLOSED),
+    0,
+    1
+  );
+}
+
 // kalidokit finger key → VRM bone suffix (VRM1 renames the thumb chain).
 const FINGER_MAP: Array<[string, string]> = [
   ["ThumbProximal", "ThumbMetacarpal"],
@@ -86,7 +103,7 @@ export class AvatarController {
   apply(solved: SolvedPose, delta: number) {
     const t = 1 - Math.exp(-this.smoothing * delta); // fps-independent lerp
     if (solved.pose) this.applyPose(solved.pose, t);
-    if (solved.face) this.applyFace(solved.face, t);
+    if (solved.face) this.applyFace(solved.face, t, delta);
     // Canonical kalidokit hand mapping: wrist pitch/yaw from the hand solve,
     // twist (z) from the arm/pose solve; fingers from the hand solve.
     if (solved.leftHand) {
@@ -218,23 +235,27 @@ export class AvatarController {
   }
 
   // ── face ─────────────────────────────────────────────────────────────────
-  private applyFace(face: TFace, t: number) {
-    // Head orientation.
+  private applyFace(face: TFace, t: number, delta: number) {
+    // Head orientation uses the body smoothing; expressions get their own
+    // snappy smoothing so blinks/speech stay crisp regardless of the
+    // responsiveness slider.
     this.rigRotation("neck", face.head, 0.7, t, true);
+    const tf = 1 - Math.exp(-FACE_SMOOTHING * delta);
 
     const em = this.vrm.expressionManager;
     if (em) {
       const set = (name: string, target: number) => {
         const prev = this.faceValues[name] ?? 0;
-        const next = THREE.MathUtils.lerp(prev, THREE.MathUtils.clamp(target, 0, 1), t);
+        const next = THREE.MathUtils.lerp(prev, THREE.MathUtils.clamp(target, 0, 1), tf);
         this.faceValues[name] = next;
         em.setValue(name, next);
       };
 
       // Per-eye blink: kalidokit reports openness (1 open) → VRM blink (1
-      // closed). The /0.8 makes a full blink actually close (SysMoCap trick).
-      set("blinkLeft", (1 - face.eye.l) / 0.8);
-      set("blinkRight", (1 - face.eye.r) / 0.8);
+      // closed). `BLINK_GAIN` remaps so resting eyes read fully open and a
+      // blink fully closes (kalidokit rarely returns a clean 0/1).
+      set("blinkLeft", blink(face.eye.l));
+      set("blinkRight", blink(face.eye.r));
 
       // Mouth visemes.
       set("aa", face.mouth.shape.A / 0.8);
@@ -248,8 +269,8 @@ export class AvatarController {
     // this sticks across vrm.update().
     const lookAt = this.vrm.lookAt;
     if (lookAt && face.pupil) {
-      this.gazeYaw = THREE.MathUtils.lerp(this.gazeYaw, face.pupil.x * GAZE_DEG, t);
-      this.gazePitch = THREE.MathUtils.lerp(this.gazePitch, -face.pupil.y * GAZE_DEG, t);
+      this.gazeYaw = THREE.MathUtils.lerp(this.gazeYaw, face.pupil.x * GAZE_DEG, tf);
+      this.gazePitch = THREE.MathUtils.lerp(this.gazePitch, -face.pupil.y * GAZE_DEG, tf);
       lookAt.applier.applyYawPitch(this.gazeYaw, this.gazePitch);
     }
   }

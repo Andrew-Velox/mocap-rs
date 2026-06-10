@@ -51,11 +51,12 @@ export function solvePose(frame: LandmarkFrame): SolvedPose {
   }
 
   if (frame.face.length > 0) {
+    // No smoothBlink — kalidokit's internal blink stabilization makes blinks
+    // laggy/mushy. We handle blink manually in the controller (like SysMoCap).
     out.face =
       Kalidokit.Face.solve(frame.face, {
         runtime: "mediapipe",
         imageSize,
-        smoothBlink: true,
       }) ?? undefined;
   }
 
