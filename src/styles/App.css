@@ -494,6 +494,47 @@ svg {
   color: var(--accent);
 }
 
+/* Centered avatar download loader */
+.avatar-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+.avatar-loader-pct {
+  font-size: clamp(3.5rem, 12vw, 6rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.avatar-loader-pct span {
+  font-size: 0.4em;
+  font-weight: 700;
+  color: var(--accent);
+  margin-left: 0.1em;
+}
+.avatar-loader-bar {
+  width: min(20rem, 60vw);
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.avatar-loader-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.avatar-loader-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
 /* Studio entry prompt (compact — not a second homepage) */
 .studio-prompt {
   display: flex;

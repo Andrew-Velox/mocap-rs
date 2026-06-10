@@ -5,6 +5,7 @@ import type { VRM } from "@pixiv/three-vrm";
 import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
 import { SettingsPanel } from "../components/SettingsPanel";
+import { AvatarLoader } from "../components/AvatarLoader";
 import { useLandmarks } from "../hooks/useLandmarks";
 import { AvatarController } from "../lib/avatarController";
 import { Tracker, filterByMode, type DetectResult } from "../lib/tracker";
@@ -28,7 +29,7 @@ export function Studio() {
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [statusMsg, setStatusMsg] = useState("");
-  const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading" });
+  const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading", progress: 0 });
   const [renderFps, setRenderFps] = useState(0);
   const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL);
   const [mode, setMode] = useState<TrackingMode>("full");
@@ -223,7 +224,8 @@ export function Studio() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.45 } }}
             >
-              {phase === "idle" && (
+              {avatar.kind === "loading" && <AvatarLoader progress={avatar.progress} />}
+              {phase === "idle" && avatar.kind !== "loading" && (
                 <motion.div
                   className="studio-prompt"
                   initial={{ opacity: 0, scale: 0.96, y: 10 }}

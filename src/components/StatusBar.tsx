@@ -21,7 +21,7 @@ export function StatusBar({
 }: StatusBarProps) {
   const avatarLabel =
     avatar.kind === "loading"
-      ? "loading…"
+      ? `${Math.round(avatar.progress * 100)}%`
       : avatar.kind === "error"
         ? `error: ${avatar.message}`
         : avatar.source === "vrm"

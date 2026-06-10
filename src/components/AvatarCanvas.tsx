@@ -5,7 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 
 export type AvatarStatus =
-  | { kind: "loading" }
+  | { kind: "loading"; progress: number } // 0..1 download progress
   | { kind: "ready"; source: "vrm" | "placeholder" }
   | { kind: "error"; message: string };
 
@@ -171,7 +171,7 @@ export function AvatarCanvas({
     }
 
     // ── Load VRM ─────────────────────────────────────────────────────────
-    onStatusRef.current?.({ kind: "loading" });
+    onStatusRef.current?.({ kind: "loading", progress: 0 });
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
 
@@ -197,7 +197,12 @@ export function AvatarCanvas({
         currentVrm = vrm;
         onStatusRef.current?.({ kind: "ready", source: "vrm" });
       },
-      undefined,
+      (ev) => {
+        if (disposed) return;
+        // Download progress (Content-Length present on static hosts / the relay).
+        const p = ev.total > 0 ? ev.loaded / ev.total : 0;
+        onStatusRef.current?.({ kind: "loading", progress: p });
+      },
       (err) => {
         if (disposed) return;
         console.warn("VRM load failed, using placeholder:", err);

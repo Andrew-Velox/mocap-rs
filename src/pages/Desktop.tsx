@@ -4,6 +4,7 @@ import type { VRM } from "@pixiv/three-vrm";
 import { AvatarCanvas, type AvatarStatus, type BackgroundMode } from "../components/AvatarCanvas";
 import { StatusBar } from "../components/StatusBar";
 import { SettingsPanel } from "../components/SettingsPanel";
+import { AvatarLoader } from "../components/AvatarLoader";
 import { PairPanel } from "../components/PairPanel";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useLandmarks } from "../hooks/useLandmarks";
@@ -24,7 +25,7 @@ const RELAY_WS_URL = `wss://${location.hostname || "localhost"}:8080/ws`;
  * humanoid with per-frame interpolation (smooth regardless of network jitter).
  */
 export function Desktop() {
-  const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading" });
+  const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading", progress: 0 });
   const [renderFps, setRenderFps] = useState(0);
   const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL);
   const [mode, setMode] = useState<TrackingMode>("full");
@@ -144,6 +145,11 @@ export function Desktop() {
           onStatus={setAvatar}
           onFrame={handleFrame}
         />
+        {avatar.kind === "loading" && (
+          <div className="hero-cover">
+            <AvatarLoader progress={avatar.progress} />
+          </div>
+        )}
         <PairPanel />
       </div>
 
