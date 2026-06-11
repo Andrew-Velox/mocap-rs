@@ -211,6 +211,12 @@ svg {
   font-size: 0.85rem;
   line-height: 1.55;
 }
+.footer-brand .brand-mark {
+  background: black;
+}
+.landing-nav .brand-mark {
+  background: black;
+}
 .footer-social {
   display: flex;
   gap: 0.55rem;

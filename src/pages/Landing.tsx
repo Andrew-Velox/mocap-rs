@@ -64,7 +64,8 @@ export function Landing() {
       <nav className="landing-nav">
         <span className="brand">
           <span className="brand-mark">
-            <PersonStanding size={15} />
+            {/* <PersonStanding size={15} /> */}
+            <img src="icons/mocap.png" alt="icon" width="24" height="24" />
           </span>
           mocap-rs
         </span>
@@ -144,7 +145,8 @@ export function Landing() {
           <div className="footer-brand">
             <span className="brand">
               <span className="brand-mark">
-                <PersonStanding size={15} />
+                {/* <PersonStanding size={15} /> */}
+                <img src="icons/mocap.png" alt="icon" width="24" height="24" />
               </span>
               mocap-rs
             </span>
