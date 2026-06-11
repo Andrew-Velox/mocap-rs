@@ -15,11 +15,12 @@ export type BackgroundMode =
   | "blue"
   | "black"
   | "white"
-  | "transparent";
+  | "transparent"
+  | "camera";
 
 // Clear color + alpha per background. `studio` keeps the CSS radial gradient
-// (alpha 0 lets it show); `transparent` makes the canvas + page see-through
-// (for OBS); the rest are solid fills (green/blue = chroma-key friendly).
+// (alpha 0 lets it show); `transparent`/`camera` make the canvas see-through
+// (camera shows a live room feed behind); the rest are solid fills.
 const BACKGROUNDS: Record<BackgroundMode, { color: number; alpha: number }> = {
   studio: { color: 0x000000, alpha: 0 },
   green: { color: 0x00b140, alpha: 1 },
@@ -27,6 +28,7 @@ const BACKGROUNDS: Record<BackgroundMode, { color: number; alpha: number }> = {
   black: { color: 0x000000, alpha: 1 },
   white: { color: 0xffffff, alpha: 1 },
   transparent: { color: 0x000000, alpha: 0 },
+  camera: { color: 0x000000, alpha: 0 },
 };
 
 function applyBackground(
@@ -36,9 +38,9 @@ function applyBackground(
 ) {
   const { color, alpha } = BACKGROUNDS[mode];
   renderer.setClearColor(color, alpha);
-  const seeThrough = mode === "transparent";
+  const seeThrough = mode === "transparent" || mode === "camera";
   mount.style.background = seeThrough ? "transparent" : "";
-  document.body.style.background = seeThrough ? "transparent" : "";
+  document.body.style.background = mode === "transparent" ? "transparent" : "";
 }
 
 // Camera framing per tracking mode — reframes onto the relevant body part
@@ -84,6 +86,7 @@ export function AvatarCanvas({
   onFrame,
 }: AvatarCanvasProps) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const arVideoRef = useRef<HTMLVideoElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const backgroundRef = useRef(background);
   backgroundRef.current = background;
@@ -100,6 +103,38 @@ export function AvatarCanvas({
     const renderer = rendererRef.current;
     const mount = mountRef.current;
     if (renderer && mount) applyBackground(renderer, mount, background);
+  }, [background]);
+
+  // "Camera (room)" AR background: show the back camera behind the avatar.
+  useEffect(() => {
+    const video = arVideoRef.current;
+    if (!video) return;
+    if (background !== "camera") {
+      const s = video.srcObject as MediaStream | null;
+      s?.getTracks().forEach((t) => t.stop());
+      video.srcObject = null;
+      video.style.display = "none";
+      return;
+    }
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false })
+      .then((s) => {
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        stream = s;
+        video.srcObject = s;
+        video.style.display = "block";
+        void video.play();
+      })
+      .catch((e) => console.warn("AR camera unavailable:", e));
+    return () => {
+      cancelled = true;
+      stream?.getTracks().forEach((t) => t.stop());
+    };
   }, [background]);
 
   useEffect(() => {
@@ -295,5 +330,10 @@ export function AvatarCanvas({
     };
   }, [modelUrl]);
 
-  return <div ref={mountRef} className="avatar-canvas" />;
+  return (
+    <div ref={mountRef} className="avatar-canvas">
+      {/* AR room background (back camera); behind the transparent WebGL canvas */}
+      <video ref={arVideoRef} className="ar-bg" playsInline muted style={{ display: "none" }} />
+    </div>
+  );
 }

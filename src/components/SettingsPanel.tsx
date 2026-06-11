@@ -45,6 +45,7 @@ const MODE_LABELS: Record<TrackingMode, string> = {
 
 const BG_LABELS: Record<BackgroundMode, string> = {
   studio: "Studio",
+  camera: "Camera (room / AR)",
   green: "Green screen",
   blue: "Blue screen",
   black: "Black",
