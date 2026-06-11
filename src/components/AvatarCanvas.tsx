@@ -43,6 +43,10 @@ function applyBackground(
 
 // Camera framing per tracking mode — reframes onto the relevant body part
 // (tuned for a ~1.5 m VRoid avatar with feet grounded at y=0).
+// Avatar render cap (fps). Lower leaves CPU headroom for MediaPipe inference on
+// machines without a strong GPU; the avatar still looks smooth at this rate.
+const RENDER_FPS_CAP = 45;
+
 export type FramingMode = "face" | "upper" | "full";
 const FRAMINGS: Record<FramingMode, { cam: [number, number, number]; target: [number, number, number] }> = {
   face: { cam: [0, 1.42, 0.72], target: [0, 1.42, 0] },
@@ -212,11 +216,21 @@ export function AvatarCanvas({
     );
 
     // ── Render loop ──────────────────────────────────────────────────────
+    // The render loop and MediaPipe inference share the main thread. Capping
+    // render frees CPU for inference (tighter tracking) on machines without a
+    // strong GPU. We still rAF every frame (cheap) but only do the heavy
+    // render/update at the cap; the lerp uses the real delta so smoothing stays
+    // frame-rate-independent.
     const clock = new THREE.Clock();
     let raf = 0;
+    let acc = 0;
+    const frameInterval = 1 / RENDER_FPS_CAP;
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
+      acc += clock.getDelta();
+      if (acc < frameInterval) return; // skip — yield the thread to inference
+      const delta = acc;
+      acc = 0;
       const time = clock.elapsedTime;
 
       onFrameRef.current?.({ vrm: currentVrm, delta, time });

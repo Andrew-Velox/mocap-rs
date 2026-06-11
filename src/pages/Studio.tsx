@@ -8,7 +8,7 @@ import { StatusBar } from "../components/StatusBar";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { useLandmarks } from "../hooks/useLandmarks";
 import { AvatarController } from "../lib/avatarController";
-import { Tracker, filterByMode, type DetectResult } from "../lib/tracker";
+import { Tracker, filterByMode, type DetectResult, type Quality } from "../lib/tracker";
 import { modelUrl } from "../lib/assets";
 import type { LandmarkFrame, TrackingMode } from "../lib/landmarks";
 
@@ -43,6 +43,7 @@ export function Studio() {
   const [mode, setMode] = useState<TrackingMode>("full");
   const [background, setBackground] = useState<BackgroundMode>("studio");
   const [responsiveness, setResponsiveness] = useState(14);
+  const [quality, setQuality] = useState<Quality>(1);
   const [upright, setUpright] = useState(true);
 
   const { solvedRef, ingest, tracking, inferenceFps } = useLandmarks();
@@ -54,6 +55,13 @@ export function Studio() {
   respRef.current = responsiveness;
   const uprightRef = useRef(upright);
   uprightRef.current = upright;
+  const qualityRef = useRef(quality);
+  qualityRef.current = quality;
+
+  const changeQuality = useCallback((q: Quality) => {
+    setQuality(q);
+    trackerRef.current?.setQuality(q); // live model switch (reloads briefly)
+  }, []);
 
   const controllerRef = useRef<AvatarController | null>(null);
   const controlledVrm = useRef<VRM | null>(null);
@@ -143,7 +151,7 @@ export function Studio() {
       await v.play();
 
       setStatusMsg("loading models…");
-      const t = await Tracker.create(setStatusMsg);
+      const t = await Tracker.create(setStatusMsg, qualityRef.current);
       t.onResult(onResult);
       trackerRef.current = t;
 
@@ -212,6 +220,8 @@ export function Studio() {
             onBackgroundChange={setBackground}
             responsiveness={responsiveness}
             onResponsivenessChange={setResponsiveness}
+            quality={quality}
+            onQualityChange={changeQuality}
             upright={upright}
             onUprightChange={setUpright}
             onCalibrate={calibrate}

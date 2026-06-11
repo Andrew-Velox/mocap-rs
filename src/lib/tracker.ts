@@ -68,27 +68,41 @@ function worldLandmarks(results: Results): NormalizedLandmark[] | undefined {
   return r.za ?? r.poseWorldLandmarks ?? r.ea;
 }
 
+/** Pose model complexity: 0 = lite (fastest), 1 = full, 2 = heavy (most accurate). */
+export type Quality = 0 | 1 | 2;
+
 export class Tracker {
   private listener?: (r: DetectResult) => void;
 
   private constructor(private holistic: Holistic) {}
 
-  static async create(onProgress?: (msg: string) => void): Promise<Tracker> {
+  private static options(complexity: Quality): Options {
+    return {
+      modelComplexity: complexity,
+      smoothLandmarks: true,
+      refineFaceLandmarks: true,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7,
+    } as Options;
+  }
+
+  /** Change the pose model live (reloads the model; brief hiccup). */
+  setQuality(complexity: Quality) {
+    this.holistic.setOptions(Tracker.options(complexity));
+  }
+
+  static async create(
+    onProgress?: (msg: string) => void,
+    complexity: Quality = 1
+  ): Promise<Tracker> {
     onProgress?.("loading holistic");
     const HolisticCtor = await loadHolistic();
     const holistic = new HolisticCtor({
       locateFile: (file) => `${ASSET_PATH}/${file}`,
     });
-    holistic.setOptions({
-      // complexity 1 (full) keeps inference fast (~20-30fps) on CPU/iGPU, which
-      // tracks tighter than complexity 2 stuck at ~8fps. Bump to 2 on a machine
-      // that can sustain it for marginally more accurate joints.
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      refineFaceLandmarks: true,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.7,
-    } as Options);
+    // complexity 1 (full) is a good default; 0 (lite) for weak CPUs, 2 (heavy)
+    // for machines with a GPU that can sustain it (most accurate joints).
+    holistic.setOptions(Tracker.options(complexity));
 
     const tracker = new Tracker(holistic);
     holistic.onResults((results) => tracker.handle(results));

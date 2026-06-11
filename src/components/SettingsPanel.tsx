@@ -5,12 +5,14 @@ import {
   ScanFace,
   Image as ImageIcon,
   Gauge,
+  Sparkles,
   ArrowUpFromLine,
   Crosshair,
   RotateCcw,
 } from "lucide-react";
 import type { TrackingMode } from "../lib/landmarks";
 import type { BackgroundMode } from "./AvatarCanvas";
+import type { Quality } from "../lib/tracker";
 
 export interface SettingsPanelProps {
   mode: TrackingMode;
@@ -20,11 +22,20 @@ export interface SettingsPanelProps {
   /** Responsiveness (controller smoothing). */
   responsiveness: number;
   onResponsivenessChange: (v: number) => void;
+  /** Quality control only applies where capture runs locally (Studio). */
+  quality?: Quality;
+  onQualityChange?: (q: Quality) => void;
   upright: boolean;
   onUprightChange: (v: boolean) => void;
   onCalibrate: () => void;
   onReset: () => void;
 }
+
+const QUALITY_LABELS: Record<Quality, string> = {
+  0: "Lite (fastest)",
+  1: "Full (default)",
+  2: "Heavy (best, needs GPU)",
+};
 
 const MODE_LABELS: Record<TrackingMode, string> = {
   face: "Face only",
@@ -108,6 +119,24 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 ))}
               </select>
             </label>
+
+            {props.onQualityChange && (
+              <label className="field">
+                <span>
+                  <Sparkles size={13} /> Quality
+                </span>
+                <select
+                  value={props.quality ?? 1}
+                  onChange={(e) => props.onQualityChange?.(Number(e.target.value) as Quality)}
+                >
+                  {([0, 1, 2] as Quality[]).map((q) => (
+                    <option key={q} value={q}>
+                      {QUALITY_LABELS[q]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="field">
               <span>
