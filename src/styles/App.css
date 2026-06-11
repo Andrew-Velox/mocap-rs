@@ -606,6 +606,22 @@ svg {
   border-top-color: var(--accent);
   animation: spin 0.9s linear infinite;
 }
+
+/* Live VRM download percentage */
+.dl-pct {
+  font-size: clamp(3rem, 11vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dl-pct span {
+  font-size: 0.38em;
+  font-weight: 700;
+  color: var(--accent);
+  margin-left: 0.08em;
+}
 .hero .loading {
   color: var(--muted);
 }

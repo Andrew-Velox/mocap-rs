@@ -216,39 +216,63 @@ export function AvatarCanvas({
 
     let placeholder: THREE.Group | null = null;
 
-    loader.load(
-      modelUrl,
-      (gltf) => {
-        if (disposed) return;
-        const vrm = gltf.userData.vrm as VRM;
-        VRMUtils.removeUnnecessaryVertices(gltf.scene);
-        VRMUtils.combineSkeletons(gltf.scene);
-        vrm.scene.traverse((o) => (o.frustumCulled = false));
-        // Face the camera. VRM 0.x looks -Z by default; rotate the *scene
-        // object* (not the hips bone) 180° so the pose solver can still drive
-        // the hips freely. (Using VRMUtils.rotateVRM0 bakes the turn into the
-        // hips bone, which then fights the per-frame hips slerp and twists the
-        // body off-axis — this matches SysMoCap's approach.)
-        if (vrm.meta?.metaVersion === "0") {
-          vrm.scene.rotation.y = Math.PI;
+    const onVrmLoaded = (gltf: { scene: THREE.Object3D; userData: { vrm: VRM } }) => {
+      if (disposed) return;
+      const vrm = gltf.userData.vrm;
+      VRMUtils.removeUnnecessaryVertices(gltf.scene);
+      VRMUtils.combineSkeletons(gltf.scene);
+      vrm.scene.traverse((o) => (o.frustumCulled = false));
+      // Face the camera. VRM 0.x looks -Z by default; rotate the *scene object*
+      // (not the hips bone) 180° so the pose solver can still drive the hips.
+      if (vrm.meta?.metaVersion === "0") vrm.scene.rotation.y = Math.PI;
+      scene.add(vrm.scene);
+      currentVrm = vrm;
+      onStatusRef.current?.({ kind: "ready", source: "vrm" });
+    };
+
+    const onVrmError = (err: unknown) => {
+      if (disposed) return;
+      console.warn("VRM load failed, using placeholder:", err);
+      placeholder = buildPlaceholder();
+      onStatusRef.current?.({ kind: "ready", source: "placeholder" });
+    };
+
+    // Stream the download for an accurate, dynamic percentage (GLTFLoader's own
+    // onProgress is unreliable with compression), then parse the buffer.
+    (async () => {
+      try {
+        const res = await fetch(modelUrl);
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+        const total = Number(res.headers.get("content-length")) || 0;
+        const reader = res.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let received = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (disposed) return;
+          chunks.push(value);
+          received += value.length;
+          onStatusRef.current?.({
+            kind: "loading",
+            progress: total > 0 ? received / total : 0,
+          });
         }
-        scene.add(vrm.scene);
-        currentVrm = vrm;
-        onStatusRef.current?.({ kind: "ready", source: "vrm" });
-      },
-      (ev) => {
         if (disposed) return;
-        // Download progress (Content-Length present on static hosts / the relay).
-        const p = ev.total > 0 ? ev.loaded / ev.total : 0;
-        onStatusRef.current?.({ kind: "loading", progress: p });
-      },
-      (err) => {
-        if (disposed) return;
-        console.warn("VRM load failed, using placeholder:", err);
-        placeholder = buildPlaceholder();
-        onStatusRef.current?.({ kind: "ready", source: "placeholder" });
+        const buf = new Uint8Array(received);
+        let off = 0;
+        for (const c of chunks) {
+          buf.set(c, off);
+          off += c.length;
+        }
+        // resourcePath lets the parser resolve any external refs relative to the
+        // model URL (VRMs are self-contained glb, so this is just a safe base).
+        const base = modelUrl.slice(0, modelUrl.lastIndexOf("/") + 1);
+        loader.parse(buf.buffer, base, onVrmLoaded as never, onVrmError);
+      } catch (err) {
+        onVrmError(err);
       }
-    );
+    })();
 
     // ── Render loop ──────────────────────────────────────────────────────
     // The render loop and MediaPipe inference share the main thread. Capping

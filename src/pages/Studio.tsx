@@ -265,7 +265,14 @@ export function Studio() {
                 </motion.div>
               ) : (
                 <motion.div className="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div className="loader-ring" />
+                  {avatar.kind === "loading" && avatar.progress > 0 ? (
+                    <div className="dl-pct">
+                      {Math.round(avatar.progress * 100)}
+                      <span>%</span>
+                    </div>
+                  ) : (
+                    <div className="loader-ring" />
+                  )}
                   <p className="loading">
                     {avatar.kind === "loading" ? "loading avatar" : statusMsg || "starting"}
                   </p>

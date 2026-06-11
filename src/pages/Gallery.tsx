@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PersonStanding, ArrowLeft, Play } from "lucide-react";
@@ -17,6 +17,15 @@ interface ModelEntry {
  */
 export function Gallery() {
   const [models, setModels] = useState<ModelEntry[]>([]);
+  const prefetched = useRef<Set<string>>(new Set());
+
+  // Warm the browser cache the moment a card is hovered/focused, so clicking it
+  // loads the VRM (mostly) from cache instead of starting the download fresh.
+  const prefetch = (url: string) => {
+    if (prefetched.current.has(url)) return;
+    prefetched.current.add(url);
+    fetch(url, { mode: "cors", cache: "force-cache" }).catch(() => {});
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +71,9 @@ export function Gallery() {
               <Link
                 className="avatar-card"
                 to={`/studio/live?m=${encodeURIComponent(modelUrl(m))}`}
+                onMouseEnter={() => prefetch(modelUrl(m))}
+                onFocus={() => prefetch(modelUrl(m))}
+                onTouchStart={() => prefetch(modelUrl(m))}
               >
                 <div className="avatar-thumb">
                   {m.thumb ? (

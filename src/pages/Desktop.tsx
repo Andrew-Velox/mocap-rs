@@ -145,7 +145,14 @@ export function Desktop() {
         {avatar.kind === "loading" && (
           <div className="hero-cover">
             <div className="hero">
-              <div className="loader-ring" />
+              {avatar.progress > 0 ? (
+                <div className="dl-pct">
+                  {Math.round(avatar.progress * 100)}
+                  <span>%</span>
+                </div>
+              ) : (
+                <div className="loader-ring" />
+              )}
               <p className="loading">loading avatar</p>
             </div>
           </div>

@@ -7,6 +7,9 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#0a0c11" />
+    <!-- Warm the CDN connection so the (large) VRM/MediaPipe assets download sooner -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="/icons/mocap.png" />
     <title>mocap-rs</title>
