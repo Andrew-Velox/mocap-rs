@@ -12,9 +12,17 @@ Built with **MediaPipe Holistic** + **Kalidokit** + **three-vrm**, with an optio
 
 Here is the application in action capturing facial expressions (eyes and mouth) and full-body movement:
 
-| Eye tracking calibration | Mouth/facial expression tracking | Full-body movement tracking |
-| :---: | :---: | :---: |
-| ![Eye tracking](public/demo/Eye.png) | ![Mouth tracking](public/demo/Mouth.png) | ![Fullbody tracking](public/demo/Fullbody.png) |
+### Eye tracking calibration
+
+<img src="public/demo/Eye.png" alt="Eye tracking" width="100%" />
+
+### Mouth/facial expression tracking
+
+<img src="public/demo/Mouth.png" alt="Mouth tracking" width="100%" />
+
+### Full-body movement tracking
+
+<img src="public/demo/Fullbody.png" alt="Fullbody tracking" width="100%" />
 
 ---
 
