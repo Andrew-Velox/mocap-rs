@@ -7,10 +7,9 @@
       "thumb": "shinoo.png"
     },
     {
-      "name": "VRoid F",
-      "file": "fem.vrm",
-      "cdn": "https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/vroid/fem_vroid.vrm",
-      "thumb": "Vroid.png"
+      "name": "Mochi",
+      "file": "mochi.vrm",
+      "cdn": "https://cdn.jsdelivr.net/gh/Andrew-Velox/mocap-rs@main/public/models/mochi.vrm"
     }
   ]
 }

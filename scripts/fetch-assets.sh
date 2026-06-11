@@ -30,7 +30,7 @@ echo "[2/2] Downloading sample VRM avatars (clean VRoid rigs)…"
 mkdir -p public/models
 VRM_BASE="https://raw.githubusercontent.com/madjin/vrm-samples/master"
 dl "$VRM_BASE/vroid/beta/Sendagaya_Shino.vrm" public/models/shino.vrm
-dl "$VRM_BASE/vroid/fem_vroid.vrm"            public/models/fem.vrm
-dl "$VRM_BASE/Avatar_Orion.vrm"              public/models/orion.vrm
+# Note: mochi.vrm is a manual, login-gated download (BOOTH) — see README. Place
+# it at public/models/mochi.vrm yourself; it isn't fetched here.
 
 echo "Done. Assets are in public/. (Swap public/models/avatar.vrm for your own VRM if you like.)"

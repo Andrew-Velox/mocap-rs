@@ -26,7 +26,7 @@ const RELAY_WS_URL = `wss://${location.hostname || "localhost"}:8080/ws`;
 export function Desktop() {
   const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading", progress: 0 });
   const [renderFps, setRenderFps] = useState(0);
-  const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL);
+  const modelUrl = DEFAULT_MODEL;
   const [mode, setMode] = useState<TrackingMode>("full");
   const [background, setBackground] = useState<BackgroundMode>("studio");
   const [responsiveness, setResponsiveness] = useState(14);
@@ -120,8 +120,6 @@ export function Desktop() {
         <span className="subtitle">real-time avatar</span>
         <div className="topbar-right">
           <SettingsPanel
-            modelUrl={modelUrl}
-            onModelChange={setModelUrl}
             mode={mode}
             onModeChange={handleModeChange}
             background={background}

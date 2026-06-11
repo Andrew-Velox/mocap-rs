@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Settings,
-  User,
   ScanFace,
   Image as ImageIcon,
   Gauge,
@@ -12,17 +11,8 @@ import {
 } from "lucide-react";
 import type { TrackingMode } from "../lib/landmarks";
 import type { BackgroundMode } from "./AvatarCanvas";
-import { asset, modelUrl } from "../lib/assets";
-
-interface ModelEntry {
-  name: string;
-  file: string;
-  cdn?: string;
-}
 
 export interface SettingsPanelProps {
-  modelUrl: string;
-  onModelChange: (url: string) => void;
   mode: TrackingMode;
   onModeChange: (mode: TrackingMode) => void;
   background: BackgroundMode;
@@ -54,21 +44,7 @@ const BG_LABELS: Record<BackgroundMode, string> = {
 /** Gear-button popover holding all desktop controls. */
 export function SettingsPanel(props: SettingsPanelProps) {
   const [open, setOpen] = useState(false);
-  const [models, setModels] = useState<ModelEntry[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(asset("models/index.json"))
-      .then((r) => (r.ok ? r.json() : { models: [] }))
-      .then((d: { models?: ModelEntry[] }) => {
-        if (!cancelled && Array.isArray(d.models)) setModels(d.models);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Close on outside click.
   useEffect(() => {
@@ -101,22 +77,6 @@ export function SettingsPanel(props: SettingsPanelProps) {
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 500, damping: 32 }}
           >
-            <label className="field">
-              <span>
-                <User size={13} /> Avatar
-              </span>
-              <select value={props.modelUrl} onChange={(e) => props.onModelChange(e.target.value)}>
-                {!models.some((m) => modelUrl(m) === props.modelUrl) && (
-                  <option value={props.modelUrl}>Current</option>
-                )}
-                {models.map((m) => (
-                  <option key={m.file} value={modelUrl(m)}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             <label className="field">
               <span>
                 <ScanFace size={13} /> Tracking

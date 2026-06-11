@@ -32,12 +32,14 @@ export function Studio() {
 
   const [params] = useSearchParams();
   const selected = params.get("m");
+  // Avatar is chosen on the gallery and passed as a full URL (?m=…). It doesn't
+  // change in-session, so it's a plain const (no in-Studio switcher anymore).
+  const model = selected ? decodeURIComponent(selected) : DEFAULT_MODEL;
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [statusMsg, setStatusMsg] = useState("");
   const [avatar, setAvatar] = useState<AvatarStatus>({ kind: "loading", progress: 0 });
   const [renderFps, setRenderFps] = useState(0);
-  const [modelUrl, setModelUrl] = useState(selected || DEFAULT_MODEL);
   const [mode, setMode] = useState<TrackingMode>("full");
   const [background, setBackground] = useState<BackgroundMode>("studio");
   const [responsiveness, setResponsiveness] = useState(14);
@@ -204,8 +206,6 @@ export function Studio() {
         <span className="subtitle">web studio</span>
         <div className="topbar-right">
           <SettingsPanel
-            modelUrl={modelUrl}
-            onModelChange={setModelUrl}
             mode={mode}
             onModeChange={setMode}
             background={background}
@@ -222,7 +222,7 @@ export function Studio() {
 
       <div className="stage">
         <AvatarCanvas
-          modelUrl={modelUrl}
+          modelUrl={model}
           background={background}
           framing={mode}
           onStatus={setAvatar}
