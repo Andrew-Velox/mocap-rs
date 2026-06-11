@@ -9,7 +9,8 @@
     {
       "name": "Mochi",
       "file": "mochi.vrm",
-      "cdn": "https://cdn.jsdelivr.net/gh/Andrew-Velox/mocap-rs@main/public/models/mochi.vrm"
+      "cdn": "https://cdn.jsdelivr.net/gh/Andrew-Velox/mocap-rs@main/public/models/mochi.vrm",
+      "thumb": "mochi.png"
     }
   ]
 }
