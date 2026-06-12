@@ -45,6 +45,7 @@ export function Studio() {
   const [responsiveness, setResponsiveness] = useState(14);
   const [quality, setQuality] = useState<Quality>(1);
   const [upright, setUpright] = useState(true);
+  const [isSplitView, setIsSplitView] = useState(false);
 
   const { solvedRef, ingest, tracking, inferenceFps } = useLandmarks();
 
@@ -230,7 +231,7 @@ export function Studio() {
         </div>
       </header>
 
-      <div className="stage">
+      <div className={`stage ${isSplitView ? "split-layout" : ""}`}>
         <AvatarCanvas
           modelUrl={model}
           background={background}
@@ -239,8 +240,19 @@ export function Studio() {
           onFrame={handleFrame}
         />
 
-        {/* Camera preview (corner). Always mounted so getUserMedia has a target. */}
-        <video ref={videoRef} className="studio-cam" playsInline muted />
+        {/* Camera preview (corner). Click to toggle split view. */}
+        <video 
+          ref={videoRef} 
+          className="studio-cam" 
+          playsInline 
+          muted 
+          onClick={(e) => {
+            console.log("Camera clicked!", isSplitView);
+            e.stopPropagation();
+            setIsSplitView(!isSplitView);
+          }}
+          title="Click to toggle split view"
+        />
 
         <AnimatePresence>
           {phase !== "running" && (
