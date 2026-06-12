@@ -25,6 +25,7 @@ type Phase = "idle" | "starting" | "running" | "error";
  */
 export function Studio() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const trackerRef = useRef<Tracker | null>(null);
   const runningRef = useRef(false);
   const rafRef = useRef(0);
@@ -90,6 +91,10 @@ export function Studio() {
     (r: DetectResult) => {
       const f = filterByMode(r, modeRef.current);
       const video = videoRef.current;
+      
+      // Draw tracking overlay
+      drawOverlay(canvasRef.current, video, f);
+      
       const frame: LandmarkFrame = {
         type: "landmarks",
         timestamp: Date.now(),
@@ -253,6 +258,9 @@ export function Studio() {
           }}
           title="Click to toggle split view"
         />
+        
+        {/* Tracking overlay canvas */}
+        <canvas ref={canvasRef} className="studio-overlay" />
 
         <AnimatePresence>
           {phase !== "running" && (
@@ -304,4 +312,87 @@ export function Studio() {
       />
     </div>
   );
+}
+
+type Conn = ReadonlyArray<readonly [number, number]>;
+const mpConns = () =>
+  window as unknown as {
+    POSE_CONNECTIONS?: Conn;
+    HAND_CONNECTIONS?: Conn;
+    FACEMESH_TESSELATION?: Conn;
+  };
+
+function drawConnectors(
+  ctx: CanvasRenderingContext2D,
+  pts: any[],
+  conns: Conn | undefined,
+  w: number,
+  h: number,
+  color: string,
+  lineWidth: number
+) {
+  if (!conns || pts.length === 0) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  for (const [a, b] of conns) {
+    const pa = pts[a];
+    const pb = pts[b];
+    if (!pa || !pb) continue;
+    ctx.moveTo(pa.x * w, pa.y * h);
+    ctx.lineTo(pb.x * w, pb.y * h);
+  }
+  ctx.stroke();
+}
+
+function drawDots(
+  ctx: CanvasRenderingContext2D,
+  pts: any[],
+  w: number,
+  h: number,
+  color: string,
+  r: number
+) {
+  ctx.fillStyle = color;
+  for (const p of pts) {
+    ctx.beginPath();
+    ctx.arc(p.x * w, p.y * h, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawOverlay(
+  canvas: HTMLCanvasElement | null,
+  video: HTMLVideoElement | null,
+  r: any
+) {
+  if (!canvas || !video) return;
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  if (!w || !h) return;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.clearRect(0, 0, w, h);
+
+  const C = mpConns();
+
+  // Face mesh + iris.
+  drawConnectors(ctx, r.face, C.FACEMESH_TESSELATION, w, h, "#46506a", 0.5);
+  if (r.face.length >= 478) {
+    drawDots(ctx, [r.face[468], r.face[473]], w, h, "#ffe603", 2);
+  }
+
+  // Pose skeleton.
+  drawConnectors(ctx, r.pose, C.POSE_CONNECTIONS, w, h, "#00cff7", 3);
+  drawDots(ctx, r.pose, w, h, "#ff0364", 2.5);
+
+  // Hands.
+  drawConnectors(ctx, r.leftHand, C.HAND_CONNECTIONS, w, h, "#eb1064", 4);
+  drawDots(ctx, r.leftHand, w, h, "#00cff7", 2);
+  drawConnectors(ctx, r.rightHand, C.HAND_CONNECTIONS, w, h, "#22c3e3", 4);
+  drawDots(ctx, r.rightHand, w, h, "#ff0364", 2);
 }
