@@ -141,7 +141,3 @@ Most modern browsers block camera access on non-localhost/non-HTTPS links.
 - Ensure that your local firewall allows inbound connections on the configured port (default is `8080`).
 
 ---
-
-## License
-
-This project is licensed under the **MIT License**.
