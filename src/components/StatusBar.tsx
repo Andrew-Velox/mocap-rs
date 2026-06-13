@@ -29,42 +29,42 @@ export function StatusBar({
           : "placeholder";
 
   return (
-    <div className="status-bar">
-      <div className={`status-group conn ${connected ? "on" : ""}`}>
-        {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
+    <div className="flex flex-wrap items-center gap-[1.35rem] px-[1.15rem] py-[0.55rem] bg-bg border-t border-border-line text-[0.82rem] text-muted">
+      <div className={`flex items-center gap-[0.45rem] ${connected ? "text-good" : "text-faint font-semibold"}`}>
+        {connected ? <Wifi size={14} className="text-good" /> : <WifiOff size={14} className="text-faint" />}
         <span>{connected ? "Connected" : "Waiting"}</span>
       </div>
 
-      <div className="status-group">
+      <div className="flex items-center gap-[0.45rem] text-faint">
         <MonitorPlay size={14} />
-        <span className="label">render</span>
-        <span className="value">{renderFps.toFixed(0)} fps</span>
+        <span className="text-faint uppercase text-[0.64rem] tracking-[0.08em]">render</span>
+        <span className="text-text text-tabular font-semibold">{renderFps.toFixed(0)} fps</span>
       </div>
 
-      <div className="status-group">
+      <div className="flex items-center gap-[0.45rem] text-faint">
         <Cpu size={14} />
-        <span className="label">inference</span>
-        <span className="value">{inferenceFps.toFixed(0)} fps</span>
+        <span className="text-faint uppercase text-[0.64rem] tracking-[0.08em]">inference</span>
+        <span className="text-text text-tabular font-semibold">{inferenceFps.toFixed(0)} fps</span>
       </div>
 
       {tracking && (
-        <div className="status-group">
-          <span className={`tag ${tracking.pose ? "on" : ""}`}>
+        <div className="flex items-center gap-[0.45rem] text-faint">
+          <span className={`inline-flex items-center gap-[0.3rem] px-[0.6rem] py-[0.16rem] rounded-full border border-border-strong text-faint text-[0.68rem] font-semibold tracking-[0.02em] ${tracking.pose ? "text-accent bg-accent-soft border-accent-strong" : ""}`}>
             <PersonStanding size={12} /> pose
           </span>
-          <span className={`tag ${tracking.face ? "on" : ""}`}>
+          <span className={`inline-flex items-center gap-[0.3rem] px-[0.6rem] py-[0.16rem] rounded-full border border-border-strong text-faint text-[0.68rem] font-semibold tracking-[0.02em] ${tracking.face ? "text-accent bg-accent-soft border-accent-strong" : ""}`}>
             <ScanFace size={12} /> face
           </span>
-          <span className={`tag ${tracking.hands ? "on" : ""}`}>
+          <span className={`inline-flex items-center gap-[0.3rem] px-[0.6rem] py-[0.16rem] rounded-full border border-border-strong text-faint text-[0.68rem] font-semibold tracking-[0.02em] ${tracking.hands ? "text-accent bg-accent-soft border-accent-strong" : ""}`}>
             <Hand size={12} /> hands
           </span>
         </div>
       )}
 
-      <div className="status-group">
+      <div className="flex items-center gap-[0.45rem] text-faint">
         <Box size={14} />
-        <span className="label">avatar</span>
-        <span className="value">{avatarLabel}</span>
+        <span className="text-faint uppercase text-[0.64rem] tracking-[0.08em]">avatar</span>
+        <span className="text-text text-tabular font-semibold">{avatarLabel}</span>
       </div>
     </div>
   );

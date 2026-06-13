@@ -16,8 +16,8 @@ const standalone = import.meta.env.VITE_STANDALONE === "1";
 
 function RouteLoading() {
   return (
-    <div className="route-loading">
-      <div className="loader-ring" />
+    <div className="flex items-center justify-center h-screen bg-bg">
+      <div className="w-[3.2rem] h-[3.2rem] rounded-full border-[3px] border-surface-3 border-t-accent animate-[spin_0.9s_linear_infinite]" />
     </div>
   );
 }

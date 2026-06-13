@@ -43,7 +43,7 @@ export function PairPanel() {
       {!open ? (
         <motion.button
           key="fab"
-          className="pair-fab"
+          className="absolute top-4 right-4 z-[5] flex items-center justify-center w-[2.7rem] h-[2.7rem] rounded-full border border-border-strong bg-surface text-accent cursor-pointer shadow-[0_12px_30px_var(--color-shadow)] hover:border-accent"
           onClick={() => setOpen(true)}
           title="Pair phone"
           initial={{ opacity: 0, scale: 0.8 }}
@@ -56,25 +56,25 @@ export function PairPanel() {
       ) : (
         <motion.div
           key="panel"
-          className="pair-panel"
+          className="absolute top-4 right-4 w-[17rem] p-4 bg-surface border border-border-line rounded shadow-[0_20px_50px_var(--color-shadow)] z-[5]"
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 16 }}
           transition={{ type: "spring", stiffness: 420, damping: 34 }}
         >
-          <div className="pair-head">
-            <span>
-              <Smartphone size={14} /> Pair your phone
+          <div className="flex justify-between items-center font-semibold text-[0.88rem] mb-3">
+            <span className="inline-flex items-center gap-[0.45rem]">
+              <Smartphone size={14} className="text-accent" /> Pair your phone
             </span>
-            <button className="pair-close" onClick={() => setOpen(false)} aria-label="Close">
+            <button className="inline-flex bg-transparent border-0 text-muted cursor-pointer p-[0.15rem] rounded-md hover:text-text hover:bg-surface-3" onClick={() => setOpen(false)} aria-label="Close">
               <X size={15} />
             </button>
           </div>
 
           {failed && (
-            <p className="pair-hint">
+            <p className="text-[0.75rem] text-muted leading-[1.5]">
               Couldn’t reach the relay. Open{" "}
-              <a href={`${RELAY_BASE}/`} target="_blank" rel="noreferrer">
+              <a href={`${RELAY_BASE}/`} target="_blank" rel="noreferrer" className="text-accent">
                 {RELAY_BASE}
               </a>{" "}
               once to accept the self-signed certificate, then retry.
@@ -83,14 +83,14 @@ export function PairPanel() {
 
           {info?.phoneUrl ? (
             <>
-              <img className="pair-qr" src={`${RELAY_BASE}/qr.svg`} alt="Phone pairing QR code" />
-              <div className="pair-url">{info.phoneUrl}</div>
-              <div className="pair-meta">
+              <img className="block w-full rounded-[10px] bg-bg border border-border-line" src={`${RELAY_BASE}/qr.svg`} alt="Phone pairing QR code" />
+              <div className="mt-[0.6rem] text-[0.72rem] text-accent break-all text-tabular">{info.phoneUrl}</div>
+              <div className="inline-flex items-center gap-[0.35rem] mt-[0.45rem] text-[0.7rem] text-faint">
                 <Users size={12} /> {info.clients} client{info.clients === 1 ? "" : "s"} connected
               </div>
             </>
           ) : (
-            !failed && <p className="pair-hint">Detecting LAN address…</p>
+            !failed && <p className="text-[0.75rem] text-muted leading-[1.5]">Detecting LAN address…</p>
           )}
         </motion.div>
       )}

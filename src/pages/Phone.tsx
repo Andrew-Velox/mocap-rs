@@ -210,15 +210,15 @@ export function Phone() {
   const connected = wsStatus === "open";
 
   return (
-    <div className="phone">
-      <div className="video-wrap">
-        <video ref={videoRef} className="cam" playsInline muted />
-        <canvas ref={canvasRef} className="overlay" />
+    <div className="flex flex-col h-screen h-[100dvh] bg-black">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]" playsInline muted />
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)] pointer-events-none" />
         <AnimatePresence>
           {countdown !== null && (
             <motion.div
               key={countdown}
-              className="countdown"
+              className="absolute top-1/2 left-1/2 -mt-[3.25rem] -ml-[3.25rem] w-[6.5rem] h-[6.5rem] flex items-center justify-center text-[3.4rem] font-extrabold text-accent-ink bg-accent rounded-full border-4 border-bg pointer-events-none z-[6] text-tabular"
               initial={{ scale: 1.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.6, opacity: 0 }}
@@ -231,29 +231,29 @@ export function Phone() {
         <AnimatePresence>
           {phase !== "running" && (
             <motion.div
-              className="hero-cover"
+              className="absolute inset-0 flex items-center justify-center bg-bg z-[8]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.4 } }}
             >
               {phase === "idle" && (
                 <motion.div
-                  className="hero"
+                  className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", stiffness: 220, damping: 26 }}
                 >
-                  <div className="hero-badge">
-                    <ShieldCheck size={13} /> on-device tracking
+                  <div className="inline-flex items-center gap-[0.4rem] px-[0.85rem] py-[0.32rem] rounded-full border border-border-strong bg-surface text-muted text-[0.74rem] font-semibold tracking-[0.02em]">
+                    <ShieldCheck size={13} className="text-good" /> on-device tracking
                   </div>
-                  <h1>
+                  <h1 className="m-0 text-[clamp(1.9rem,5vw,3rem)] leading-[1.12] font-extrabold tracking-[-0.03em] text-text">
                     Your phone is
                     <br />
-                    <span className="hero-accent">the mocap camera.</span>
+                    <span className="text-accent">the mocap camera.</span>
                   </h1>
-                  <p>Point it at yourself, tap start, and watch the avatar follow.</p>
+                  <p className="m-0 text-muted text-base leading-[1.6] max-w-[26rem]">Point it at yourself, tap start, and watch the avatar follow.</p>
                   <motion.button
-                    className="start-btn"
+                    className="inline-flex items-center gap-[0.55rem] mt-1 px-10 py-[0.95rem] text-[1.02rem] font-bold tracking-[0.01em] text-accent-ink bg-accent border-0 rounded-full cursor-pointer touch-manipulation shadow-[0_14px_36px_var(--color-shadow)] hover:bg-accent-strong"
                     onClick={start}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -262,17 +262,17 @@ export function Phone() {
                 </motion.div>
               )}
               {phase === "starting" && (
-                <motion.div className="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div className="loader-ring" />
-                  <p className="loading">{statusMsg}</p>
+                <motion.div className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="w-[3.2rem] h-[3.2rem] rounded-full border-[3px] border-surface-3 border-t-accent animate-[spin_0.9s_linear_infinite]" />
+                  <p className="m-0 text-muted text-base leading-[1.6] after:content-['…']">{statusMsg}</p>
                 </motion.div>
               )}
               {phase === "error" && (
-                <motion.div className="hero" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-                  <p className="err">
+                <motion.div className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+                  <p className="m-0 inline-flex items-center gap-[0.45rem] text-bad text-base">
                     <AlertTriangle size={16} /> {statusMsg}
                   </p>
-                  <motion.button className="start-btn" onClick={start} whileTap={{ scale: 0.95 }}>
+                  <motion.button className="inline-flex items-center gap-[0.55rem] mt-1 px-10 py-[0.95rem] text-[1.02rem] font-bold tracking-[0.01em] text-accent-ink bg-accent border-0 rounded-full cursor-pointer touch-manipulation shadow-[0_14px_36px_var(--color-shadow)] hover:bg-accent-strong" onClick={start} whileTap={{ scale: 0.95 }}>
                     <Play size={18} /> Retry
                   </motion.button>
                 </motion.div>
@@ -282,16 +282,16 @@ export function Phone() {
         </AnimatePresence>
       </div>
 
-      <div className="phone-hud">
-        <span className={`pill ${connected ? "on" : "off"}`}>
+      <div className="flex flex-wrap items-center gap-2 px-3 py-[0.6rem] pb-[calc(0.6rem+env(safe-area-inset-bottom))] bg-bg border-t border-border-line">
+        <span className={`inline-flex items-center gap-[0.35rem] text-[0.74rem] font-medium px-[0.8rem] py-[0.34rem] rounded-full bg-surface-2 border border-border-line text-tabular ${connected ? "text-good border-good bg-good-soft" : "text-warn border-border-strong"}`}>
           {connected ? <Wifi size={13} /> : <WifiOff size={13} />}
           {connected ? "linked" : "connecting"}
         </span>
-        <span className="pill">
+        <span className="inline-flex items-center gap-[0.35rem] text-[0.74rem] font-medium px-[0.8rem] py-[0.34rem] rounded-full bg-surface-2 border border-border-line text-muted text-tabular">
           <Gauge size={13} /> {fps} fps
         </span>
-        <span className="pill">{mode}</span>
-        <span className="pill">
+        <span className="inline-flex items-center gap-[0.35rem] text-[0.74rem] font-medium px-[0.8rem] py-[0.34rem] rounded-full bg-surface-2 border border-border-line text-muted text-tabular">{mode}</span>
+        <span className="inline-flex items-center gap-[0.35rem] text-[0.74rem] font-medium px-[0.8rem] py-[0.34rem] rounded-full bg-surface-2 border border-border-line text-muted text-tabular">
           {[
             detected.pose && "pose",
             detected.face && "face",
@@ -302,10 +302,10 @@ export function Phone() {
         </span>
         {phase === "running" && (
           <>
-            <button className="pill btn" onClick={calibrate}>
+            <button className="inline-flex items-center gap-[0.35rem] text-[0.74rem] font-semibold px-[0.8rem] py-[0.34rem] rounded-full bg-surface-2 border border-border-strong text-text cursor-pointer hover:border-accent hover:text-accent" onClick={calibrate}>
               <Crosshair size={13} /> Calibrate
             </button>
-            <button className="pill btn" onClick={resetCalibration}>
+            <button className="inline-flex items-center gap-[0.35rem] text-[0.74rem] font-semibold px-[0.8rem] py-[0.34rem] rounded-full bg-surface-2 border border-border-strong text-text cursor-pointer hover:border-accent hover:text-accent" onClick={resetCalibration}>
               <RotateCcw size={13} /> Reset
             </button>
           </>

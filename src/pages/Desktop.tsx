@@ -109,16 +109,16 @@ export function Desktop() {
   );
 
   return (
-    <div className="desktop">
-      <header className="topbar">
-        <span className="brand">
-          <span className="brand-mark">
+    <div className="flex flex-col h-screen">
+      <header className="flex items-center gap-3 px-[1.15rem] py-[0.65rem] bg-bg border-b border-border-line select-none">
+        <span className="inline-flex items-center gap-[0.55rem] font-bold text-[0.95rem] tracking-[-0.01em] text-text">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-[9px] bg-accent text-accent-ink">
             <PersonStanding size={15} />
           </span>
           mocap-rs
         </span>
-        <span className="subtitle">real-time avatar</span>
-        <div className="topbar-right">
+        <span className="text-[0.78rem] text-faint tracking-[0.01em] pl-3 border-l border-border-line">real-time avatar</span>
+        <div className="ml-auto flex items-center gap-2">
           <SettingsPanel
             mode={mode}
             onModeChange={handleModeChange}
@@ -134,7 +134,7 @@ export function Desktop() {
         </div>
       </header>
 
-      <div className="stage">
+      <div className="relative flex-1 min-h-0 flex">
         <AvatarCanvas
           modelUrl={modelUrl}
           background={background}
@@ -143,17 +143,17 @@ export function Desktop() {
           onFrame={handleFrame}
         />
         {avatar.kind === "loading" && (
-          <div className="hero-cover">
-            <div className="hero">
+          <div className="absolute inset-0 flex items-center justify-center bg-bg z-[8]">
+            <div className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]">
               {avatar.progress > 0 ? (
-                <div className="dl-pct">
+                <div className="text-[clamp(3rem,11vw,5.5rem)] font-extrabold tracking-[-0.04em] leading-none text-text text-tabular">
                   {Math.round(avatar.progress * 100)}
-                  <span>%</span>
+                  <span className="text-[0.38em] font-bold text-accent ml-[0.08em]">%</span>
                 </div>
               ) : (
-                <div className="loader-ring" />
+                <div className="w-[3.2rem] h-[3.2rem] rounded-full border-[3px] border-surface-3 border-t-accent animate-[spin_0.9s_linear_infinite]" />
               )}
-              <p className="loading">loading avatar</p>
+              <p className="m-0 text-muted text-base leading-[1.6] after:content-['…']">loading avatar</p>
             </div>
           </div>
         )}

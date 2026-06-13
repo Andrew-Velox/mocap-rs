@@ -355,9 +355,9 @@ export function AvatarCanvas({
   }, [modelUrl]);
 
   return (
-    <div ref={mountRef} className="avatar-canvas">
+    <div ref={mountRef} className="flex-1 min-h-0 relative bg-radial-stage">
       {/* AR room background (back camera); behind the transparent WebGL canvas */}
-      <video ref={arVideoRef} className="ar-bg" playsInline muted style={{ display: "none" }} />
+      <video ref={arVideoRef} className="absolute inset-0 w-full h-full object-cover z-0" playsInline muted style={{ display: "none" }} />
     </div>
   );
 }
