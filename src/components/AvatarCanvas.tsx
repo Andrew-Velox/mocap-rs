@@ -141,11 +141,20 @@ export function AvatarCanvas({
     const mount = mountRef.current;
     if (!mount) return;
 
+    // Wait one frame for layout to settle — the parent flex container may have
+    // just re-laid-out from a split toggle, in which case mount.clientWidth is
+    // still 0 synchronously. Reading size before paint produces a 0x0 canvas.
+    const initW = mount.clientWidth || mount.offsetWidth;
+    const initH = mount.clientHeight || mount.offsetHeight;
+
     // ── Renderer ─────────────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(mount.clientWidth, mount.clientHeight);
+    renderer.setSize(initW || 1, initH || 1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.display = "block";
     mount.appendChild(renderer.domElement);
     rendererRef.current = renderer;
     applyBackground(renderer, mount, backgroundRef.current);
@@ -154,7 +163,7 @@ export function AvatarCanvas({
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       30,
-      mount.clientWidth / mount.clientHeight,
+      (initW || 1) / (initH || 1),
       0.1,
       20
     );
@@ -328,19 +337,24 @@ export function AvatarCanvas({
     // ── Resize ───────────────────────────────────────────────────────────
     const onResize = () => {
       if (!mount) return;
-      const w = mount.clientWidth;
-      const h = mount.clientHeight;
+      const w = mount.clientWidth || mount.offsetWidth;
+      const h = mount.clientHeight || mount.offsetHeight;
+      if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
     const ro = new ResizeObserver(onResize);
     ro.observe(mount);
+    // Re-check size on the next frame in case the parent layout shifts between
+    // the initial effect and the first ResizeObserver callback.
+    const initResizeRaf = requestAnimationFrame(onResize);
 
     // ── Cleanup ──────────────────────────────────────────────────────────
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(initResizeRaf);
       ro.disconnect();
       controls.dispose();
       if (currentVrm) {
@@ -355,7 +369,7 @@ export function AvatarCanvas({
   }, [modelUrl]);
 
   return (
-    <div ref={mountRef} className="flex-1 min-h-0 relative bg-radial-stage">
+    <div ref={mountRef} className="relative w-full h-full overflow-hidden bg-radial-stage">
       {/* AR room background (back camera); behind the transparent WebGL canvas */}
       <video ref={arVideoRef} className="absolute inset-0 w-full h-full object-cover z-0" playsInline muted style={{ display: "none" }} />
     </div>

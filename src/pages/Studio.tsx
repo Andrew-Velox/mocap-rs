@@ -26,6 +26,7 @@ type Phase = "idle" | "starting" | "running" | "error";
 export function Studio() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const trackerRef = useRef<Tracker | null>(null);
   const runningRef = useRef(false);
   const rafRef = useRef(0);
@@ -47,6 +48,7 @@ export function Studio() {
   const [quality, setQuality] = useState<Quality>(1);
   const [upright, setUpright] = useState(true);
   const [isSplitView, setIsSplitView] = useState(false);
+  const [avatarKey, setAvatarKey] = useState(0);
 
   const { solvedRef, ingest, tracking, inferenceFps } = useLandmarks();
 
@@ -144,6 +146,17 @@ export function Studio() {
 
   useEffect(() => () => stop(), [stop]);
 
+  // Reattach the active camera stream when the <video> element is re-mounted
+  // (e.g. toggling between corner preview and split view). Without this the new
+  // element would have no srcObject and the camera would appear blank.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v && streamRef.current && v.srcObject !== streamRef.current) {
+      v.srcObject = streamRef.current;
+      v.play().catch(() => {});
+    }
+  });
+
   const start = useCallback(async () => {
     setPhase("starting");
     setStatusMsg("requesting camera…");
@@ -152,6 +165,7 @@ export function Studio() {
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      streamRef.current = stream;
       const v = videoRef.current!;
       v.srcObject = stream;
       await v.play();
@@ -236,74 +250,115 @@ export function Studio() {
         </div>
       </header>
 
-      <div className={`relative flex-1 min-h-0 flex ${isSplitView ? "flex-row" : ""}`}>
-        <AvatarCanvas
-          modelUrl={model}
-          background={background}
-          framing={mode}
-          onStatus={setAvatar}
-          onFrame={handleFrame}
-        />
-
-        {/* Camera preview (corner). Click to toggle split view. */}
-        <video
-          ref={videoRef}
-          className={`absolute bottom-4 left-4 w-44 max-w-[32vw] aspect-[4/3] object-cover border border-border-strong rounded bg-black shadow-[0_14px_36px_var(--color-shadow)] z-[4] cursor-pointer pointer-events-auto [transform:scaleX(-1)] ${isSplitView ? "static w-[40%] h-full flex-[0_0_auto] flex-grow-0 rounded-none border-0 border-r-2 border-border-strong shadow-none m-0 ml-0 [transform:scaleX(-1)] order-1 object-cover" : ""}`}
-          playsInline
-          muted
-          onClick={(e) => {
-            console.log("Camera clicked!", isSplitView);
-            e.stopPropagation();
-            setIsSplitView(!isSplitView);
-          }}
-          title="Click to toggle split view"
-        />
-
-        {/* Tracking overlay canvas */}
-        <canvas
-          ref={canvasRef}
-          className={`absolute bottom-4 left-4 w-44 max-w-[32vw] aspect-[4/3] rounded z-[5] pointer-events-none [transform:scaleX(-1)] ${isSplitView ? "w-[40%] h-full aspect-auto rounded-none" : ""}`}
-        />
-
-        <AnimatePresence>
-          {phase !== "running" && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center bg-bg z-[8]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.45 } }}
+      <div className="relative flex-1 min-h-0 flex bg-bg">
+        <div
+          className={`relative bg-black border-border-strong overflow-hidden transition-[width] duration-200 ease-out shrink-0 ${
+            isSplitView ? "w-[42%] h-full border-r" : "w-0 h-full border-r-0"
+          }`}
+        >
+          {isSplitView && (
+            <div
+              className="absolute inset-0 cursor-pointer [transform:scaleX(-1)]"
+              onClick={() => {
+                setIsSplitView(false);
+                setAvatarKey((k) => k + 1);
+              }}
+              title="Click to collapse"
             >
-              {phase === "error" ? (
-                <motion.div
-                  className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <p className="m-0 inline-flex items-center gap-[0.45rem] text-bad text-base">
-                    <AlertTriangle size={16} /> {statusMsg}
-                  </p>
-                  <motion.button className="inline-flex items-center gap-[0.55rem] mt-1 px-10 py-[0.95rem] text-[1.02rem] font-bold tracking-[0.01em] text-accent-ink bg-accent border-0 rounded-full cursor-pointer touch-manipulation shadow-[0_14px_36px_var(--color-shadow)] hover:bg-accent-strong" onClick={start} whileTap={{ scale: 0.96 }}>
-                    <Play size={18} /> Retry
-                  </motion.button>
-                </motion.div>
-              ) : (
-                <motion.div className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  {avatar.kind === "loading" && avatar.progress > 0 ? (
-                    <div className="text-[clamp(3rem,11vw,5.5rem)] font-extrabold tracking-[-0.04em] leading-none text-text text-tabular">
-                      {Math.round(avatar.progress * 100)}
-                      <span className="text-[0.38em] font-bold text-accent ml-[0.08em]">%</span>
-                    </div>
-                  ) : (
-                    <div className="w-[3.2rem] h-[3.2rem] rounded-full border-[3px] border-surface-3 border-t-accent animate-[spin_0.9s_linear_infinite]" />
-                  )}
-                  <p className="m-0 text-muted text-base leading-[1.6] after:content-['…']">
-                    {avatar.kind === "loading" ? "loading avatar" : statusMsg || "starting"}
-                  </p>
-                </motion.div>
-              )}
-            </motion.div>
+              <video
+                ref={videoRef}
+                className="absolute inset-0 w-full h-full object-cover"
+                playsInline
+                muted
+              />
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              />
+              <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 border border-border-strong text-muted text-[0.7rem] font-semibold tracking-[0.04em] uppercase z-[3] pointer-events-none [transform:scaleX(-1)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-bad animate-pulse" />
+                Live
+              </div>
+            </div>
           )}
-        </AnimatePresence>
+        </div>
+
+        <div className="relative flex-1 min-w-0 min-h-0 overflow-hidden">
+          <AvatarCanvas
+            key={avatarKey}
+            modelUrl={model}
+            background={background}
+            framing={mode}
+            onStatus={setAvatar}
+            onFrame={handleFrame}
+          />
+
+          {!isSplitView && (
+            <button
+              className="absolute bottom-4 left-4 z-[4] p-0 border-0 bg-transparent cursor-pointer rounded overflow-hidden shadow-[0_14px_36px_var(--color-shadow)] group"
+              onClick={() => {
+                setIsSplitView(true);
+                setAvatarKey((k) => k + 1);
+              }}
+              title="Expand to split view"
+            >
+              <video
+                ref={videoRef}
+                className="block w-44 max-w-[32vw] aspect-[4/3] object-cover border border-border-strong rounded bg-black [transform:scaleX(-1)] group-hover:border-accent transition-colors"
+                playsInline
+                muted
+              />
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)] pointer-events-none rounded"
+              />
+              <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/70 text-muted text-[0.62rem] font-semibold tracking-[0.04em] uppercase opacity-0 group-hover:opacity-100 transition-opacity [transform:scaleX(-1)]">
+                <span className="w-1 h-1 rounded-full bg-bad" />
+                Expand
+              </span>
+            </button>
+          )}
+
+          <AnimatePresence>
+            {phase !== "running" && (
+              <motion.div
+                className="absolute inset-0 flex items-center justify-center bg-bg z-[8]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.45 } }}
+              >
+                {phase === "error" ? (
+                  <motion.div
+                    className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <p className="m-0 inline-flex items-center gap-[0.45rem] text-bad text-base">
+                      <AlertTriangle size={16} /> {statusMsg}
+                    </p>
+                    <motion.button className="inline-flex items-center gap-[0.55rem] mt-1 px-10 py-[0.95rem] text-[1.02rem] font-bold tracking-[0.01em] text-accent-ink bg-accent border-0 rounded-full cursor-pointer touch-manipulation shadow-[0_14px_36px_var(--color-shadow)] hover:bg-accent-strong" onClick={start} whileTap={{ scale: 0.96 }}>
+                      <Play size={18} /> Retry
+                    </motion.button>
+                  </motion.div>
+                ) : (
+                  <motion.div className="flex flex-col items-center gap-[1.1rem] text-center px-8 max-w-[34rem]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    {avatar.kind === "loading" && avatar.progress > 0 ? (
+                      <div className="text-[clamp(3rem,11vw,5.5rem)] font-extrabold tracking-[-0.04em] leading-none text-text text-tabular">
+                        {Math.round(avatar.progress * 100)}
+                        <span className="text-[0.38em] font-bold text-accent ml-[0.08em]">%</span>
+                      </div>
+                    ) : (
+                      <div className="w-[3.2rem] h-[3.2rem] rounded-full border-[3px] border-surface-3 border-t-accent animate-[spin_0.9s_linear_infinite]" />
+                    )}
+                    <p className="m-0 text-muted text-base leading-[1.6] after:content-['…']">
+                      {avatar.kind === "loading" ? "loading avatar" : statusMsg || "starting"}
+                    </p>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       <StatusBar
